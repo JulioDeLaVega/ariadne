@@ -1,7 +1,7 @@
 mod tools_call;
 mod tools_list;
 
-use actix_web::{web, HttpResponse, Result};
+use actix_web::{web, HttpResponse, Result, HttpRequest};
 use crate::AppState; // adjust to your actual path
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -11,7 +11,12 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 cfg.route("/mcp", web::post().to(handle_rpc))
    .route("/mcp", web::get().to(|| async {
        HttpResponse::MethodNotAllowed().finish()
-   }));
+   }))
+   .route("/icon.svg", web::get().to(|| async {
+            HttpResponse::Ok()
+                .content_type("image/svg")
+                .body(include_bytes!("../../icon.svg").to_vec())
+    }));
 }
 
 #[derive(Deserialize)]
@@ -49,6 +54,7 @@ struct RpcError {
 }
 
 pub async fn handle_rpc(
+    req: HttpRequest,
     state: web::Data<AppState>,
     body: web::Json<RpcRequest>,
 ) -> Result<HttpResponse> {
@@ -109,16 +115,34 @@ pub async fn handle_rpc(
             error: None,
         },
 
-        "initialize" => RpcResponse {
+        "initialize" => {
+
+        let conn = req.connection_info();
+        let scheme = conn.scheme();
+        let host = conn.host();
+
+        RpcResponse {
             jsonrpc: "2.0",
             id: body.id.clone(),
             result: Some(serde_json::json!({
                 "protocolVersion": "2025-06-18",
                 // "protocolVersion": "2026-07-28",
                 "capabilities": { "tools": {} },
-                "serverInfo": { "name": "your-server", "version": "0.1.0" }
+                "serverInfo": {
+                    "name": "rust-mcp",
+                    "title": "rust-mcp",
+                    "version": "0.1.0",
+                    "icons": [
+                        {
+                            "src": format!("{}://{}/icon.svg", scheme, host),
+                            "mimeType": "image/svg+xml",
+                            "sizes": ["48x48"]
+                        }
+                    ]
+                }
             })),
             error: None,
+        }
         },
 
         other => RpcResponse {
