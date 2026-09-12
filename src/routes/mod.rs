@@ -12,7 +12,7 @@ cfg.route("/mcp", web::post().to(handle_rpc))
    .route("/mcp", web::get().to(|| async {
        HttpResponse::MethodNotAllowed().finish()
    }))
-   .route("/icon.svg", web::get().to(|| async {
+   .route("/icon.ico", web::get().to(|| async {
             HttpResponse::Ok()
                 .content_type("image/x-icon")
                 .body(include_bytes!("../../icon.ico").to_vec())
