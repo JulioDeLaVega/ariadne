@@ -14,8 +14,8 @@ cfg.route("/mcp", web::post().to(handle_rpc))
    }))
    .route("/icon.svg", web::get().to(|| async {
             HttpResponse::Ok()
-                .content_type("image/svg")
-                .body(include_bytes!("../../icon.svg").to_vec())
+                .content_type("image/x-icon")
+                .body(include_bytes!("../../icon.ico").to_vec())
     }));
 }
 
@@ -134,8 +134,8 @@ pub async fn handle_rpc(
                     "version": "0.1.0",
                     "icons": [
                         {
-                            "src": format!("{}://{}/icon.svg", scheme, host),
-                            "mimeType": "image/svg+xml",
+                            "src": format!("{}://{}/icon.ico", scheme, host),
+                            "mimeType": "image/x-icon",
                             "sizes": ["48x48"]
                         }
                     ]
