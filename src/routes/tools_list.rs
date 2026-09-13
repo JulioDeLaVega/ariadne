@@ -68,7 +68,7 @@ pub fn tools_list() -> Vec<ToolDefinition> {
         },
         ToolDefinition {
             name: "sparql_get_objects_based_on_uri".into(),
-            description: "Retrieve resources (RDF objects) based on a given URI using the EU Publications Office SPARQL endpoint. You may find resources directly associated with a piece of work, such as implementing acts, resolutions, communications, working documents, parliament decisions, implementing decisions and other documents.".into(),
+            description: "Retrieve resources (RDF objects) that reference or relate to a given URI using the EU Publications Office SPARQL endpoint. This traverses relationships in the REVERSE direction from sparql_get_predicates: given a work's URI, it finds other works that point AT it — including acts that amend or repeal it, implementing acts, resolutions, communications, working documents, parliament decisions, implementing decisions, Commission reports referencing it, and other documents that cite it. Useful for building an amendment/repeal history (e.g. querying a regulation's URI returns every later act that amends or repeals it), for finding downstream implementing measures, or for surfacing institutional follow-up (resolutions, reports) tied to a piece of legislation. Does not cover national transposition measures for directives, which are not modeled in this graph.".into(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
