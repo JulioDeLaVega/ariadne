@@ -108,5 +108,33 @@ pub fn tools_list() -> Vec<ToolDefinition> {
                 "required": ["input"]
             }),
         },
+        ToolDefinition {
+            name: "ted_search".into(),
+            description: "Search EU public procurement notices using the official TED Search API.".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "input": {
+                        "type": "string",
+                        "description": "TED search query using the TED Search API query syntax."
+                    }
+                },
+                "required": ["input"]
+            }),
+        },
+        ToolDefinition {
+            name: "ted_award".into(),
+            description: "Search EU public procurement awards using the official TED Search API.".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "input": {
+                        "type": "string",
+                        "description": "TED search query using the TED Search API query syntax."
+                    }
+                },
+                "required": ["input"]
+            }),
+        },
     ]
 }

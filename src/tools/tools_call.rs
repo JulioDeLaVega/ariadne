@@ -1,4 +1,4 @@
-use crate::utils::{eurlex, sparql, Client, Config, ToolError};
+use crate::utils::{eurlex, sparql, Client, Config, ToolError, ted};
 
 pub async fn tools_call(
     client: &Client,
@@ -20,6 +20,12 @@ pub async fn tools_call(
         }
         "sparql_get_resource_legal_information_miscellaneous" => {
             run_sparql(client, config, sparql::get_resource_legal_information_miscellaneous(input)).await
+        }
+        "ted_search" => {
+            ted::ted_search(client, input).await
+        }
+        "ted_award" => {
+            ted::ted_award(client, input).await
         }
 
         other => Err(ToolError::UnknownTool(other.to_string())),

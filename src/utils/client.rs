@@ -21,4 +21,20 @@ impl Client {
             .text()
             .await
     }
+
+    pub async fn post_json(
+        &self,
+        url: &str,
+        body: &serde_json::Value,
+    ) -> Result<String, reqwest::Error> {
+        self.inner
+            .post(url)
+            .json(body)
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await
+    }
+    
 }
