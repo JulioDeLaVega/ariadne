@@ -116,7 +116,7 @@ pub fn tools_list() -> Vec<ToolDefinition> {
                 "properties": {
                     "input": {
                         "type": "string",
-                        "description": "TED search query using the TED Search API query syntax."
+                        "description": "TED search query using the TED Search API query syntax. Use the language of the target country in the query for best results."
                     }
                 },
                 "required": ["input"]
@@ -130,7 +130,7 @@ pub fn tools_list() -> Vec<ToolDefinition> {
                 "properties": {
                     "input": {
                         "type": "string",
-                        "description": "TED search query using the TED Search API query syntax."
+                        "description": "TED search query using the TED Search API query syntax. Use the language of the target country in the query for best results."
                     }
                 },
                 "required": ["input"]

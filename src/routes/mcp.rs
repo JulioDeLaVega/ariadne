@@ -12,10 +12,10 @@ cfg.route("/mcp", web::post().to(handle_rpc))
    .route("/mcp", web::get().to(|| async {
        HttpResponse::MethodNotAllowed().finish()
    }))
-   .route("/icon.ico", web::get().to(|| async {
+   .route("/icon.png", web::get().to(|| async {
             HttpResponse::Ok()
-                .content_type("image/x-icon")
-                .body(include_bytes!("../../icon.ico").to_vec())
+                .content_type("image/png")
+                .body(include_bytes!("../../icon.png").to_vec())
     }));
 }
 
@@ -170,8 +170,8 @@ pub async fn handle_rpc(
                     "version": "0.1.0",
                     "icons": [
                         {
-                            "src": format!("{}://{}/icon.ico", scheme, host),
-                            "mimeType": "image/x-icon",
+                            "src": format!("{}://{}/icon.png", scheme, host),
+                            "mimeType": "image/png",
                             "sizes": ["48x48"]
                         }
                     ]

@@ -1,5 +1,4 @@
-use serde_json::json;
-
+use serde_json::{json, Value};
 use crate::utils::{Client, ToolError};
 
 pub async fn ted_search(
@@ -23,18 +22,33 @@ pub async fn ted_search(
             "deadline-receipt-tender-date-lot",
             "procedure-identifier"
         ],
-        "limit": 10,
+        "limit": 50,
         "scope": "ACTIVE",
         "paginationMode": "ITERATION"
     });
 
-    client
+    let response = client
         .post_json(
             "https://api.ted.europa.eu/v3/notices/search",
             &body,
         )
         .await
+        .map_err(|e| ToolError::Http(e.to_string()))?;
+
+    let mut data: Value = serde_json::from_str(&response)
+        .map_err(|e| ToolError::Http(e.to_string()))?;
+
+    if let Some(results) = data.get_mut("notices").and_then(|v| v.as_array_mut()) {
+        for notice in results {
+            if let Some(obj) = notice.as_object_mut() {
+                obj.remove("links");
+            }
+        }
+    }
+
+    serde_json::to_string(&data)
         .map_err(|e| ToolError::Http(e.to_string()))
+
 }
 
 pub async fn ted_award(
@@ -57,16 +71,31 @@ pub async fn ted_award(
             "result-value-cur-notice",
             "contract-conclusion-date"
         ],
-        "limit": 10,
+        "limit": 50,
         "scope": "ACTIVE",
         "paginationMode": "ITERATION"
     });
 
-    client
+    let response = client
         .post_json(
             "https://api.ted.europa.eu/v3/notices/search",
             &body,
         )
         .await
+        .map_err(|e| ToolError::Http(e.to_string()))?;
+
+    let mut data: Value = serde_json::from_str(&response)
+        .map_err(|e| ToolError::Http(e.to_string()))?;
+
+    if let Some(results) = data.get_mut("notices").and_then(|v| v.as_array_mut()) {
+        for notice in results {
+            if let Some(obj) = notice.as_object_mut() {
+                obj.remove("links");
+            }
+        }
+    }
+
+    serde_json::to_string(&data)
         .map_err(|e| ToolError::Http(e.to_string()))
+
 }
