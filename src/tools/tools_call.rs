@@ -1,37 +1,28 @@
 use crate::utils::{eurlex, sparql, Client, Config, ToolError, ted};
 
-pub async fn tools_call(
-    client: &Client,
-    config: &Config,
-    name: &str,
-    input: &str,
-) -> Result<String, ToolError> {
+pub async fn tools_call(client: &Client, config: &Config, name: &str, input: &str,) -> Result<String, ToolError> {
     match name {
-        "eurlex_url" => eurlex::call_eurlex_url(client, config, input).await,
-        "sparql_reg_search" => run_sparql(client, config, sparql::reg_search(input)).await,
-        "sparql_get_related_acts" => run_sparql(client, config, sparql::get_related_acts(input)).await,
-        "sparql_get_predicates" => run_sparql(client, config, sparql::get_predicates(input)).await,
-        "sparql_uri_from_celex" => run_sparql(client, config, sparql::uri_from_celex(input)).await,
-        "sparql_get_objects_based_on_uri" => {
-            run_sparql(client, config, sparql::get_objects_based_on_uri(input)).await
+        "eurlex.get_document" => eurlex::get_document(client, config, input).await,
+        "cellar.get_works_based_on_keyword" => sparql::run_sparql(client, config, sparql::get_works_based_on_keyword(input)).await,
+        "cellar.get_related_acts" => sparql::run_sparql(client, config, sparql::get_related_acts(input)).await,
+        "cellar.get_predicates" => sparql::run_sparql(client, config, sparql::get_predicates(input)).await,
+        "cellar.uri_from_celex" => sparql::run_sparql(client, config, sparql::uri_from_celex(input)).await,
+        "cellar.get_objects_based_on_uri" => {
+            sparql::run_sparql(client, config, sparql::get_objects_based_on_uri(input)).await
         }
-        "sparql_get_resource_adopts_resource" => {
-            run_sparql(client, config, sparql::get_resource_adopts_resource(input)).await
+        "cellar.get_resource_adopts_resource" => {
+            sparql::run_sparql(client, config, sparql::get_resource_adopts_resource(input)).await
         }
-        "sparql_get_resource_legal_information_miscellaneous" => {
-            run_sparql(client, config, sparql::get_resource_legal_information_miscellaneous(input)).await
+        "cellar.get_resource_legal_information_miscellaneous" => {
+            sparql::run_sparql(client, config, sparql::get_resource_legal_information_miscellaneous(input)).await
         }
-        "ted_search" => {
-            ted::ted_search(client, input).await
+        "ted.search_notices" => {
+            ted::search_notices(client, input).await
         }
-        "ted_award" => {
-            ted::ted_award(client, input).await
+        "ted.search_awards" => {
+            ted::search_awards(client, input).await
         }
 
         other => Err(ToolError::UnknownTool(other.to_string())),
     }
-}
-
-async fn run_sparql(client: &Client, config: &Config, query: String) -> Result<String, ToolError> {
-    client.sparql_query(&config.sparql_endpoint, &query).await.map_err(ToolError::from)
 }

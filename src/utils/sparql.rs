@@ -1,6 +1,12 @@
+use crate::utils::{Client, ToolError, Config};
+
 const PREFIX: &str = "PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>";
 
-pub fn reg_search(input: &str) -> String {
+pub async fn run_sparql(client: &Client, config: &Config, query: String) -> Result<String, ToolError> {
+    client.sparql_query(&config.sparql_endpoint, &query).await.map_err(ToolError::from)
+}
+
+pub fn get_works_based_on_keyword(input: &str) -> String {
     format!(r#"{PREFIX}
         SELECT DISTINCT ?work ?celex ?title
         WHERE {{

@@ -156,7 +156,7 @@ async fn test_tool_ted_search() {
             "id": 6,
             "method": "tools/call",
             "params": {
-                "name": "ted_search",
+                "name": "ted.search_notices",
                 "arguments": {
                     "input": "FT~\"artificial intelligence\" AND buyer-country=DEU AND publication-date>=20260101"
                 }
@@ -188,7 +188,7 @@ async fn test_tool_ted_award() {
             "id": 7,
             "method": "tools/call",
             "params": {
-                "name": "ted_award",
+                "name": "ted.search_awards",
                 "arguments": {
                     "input": "FT~\"artificial intelligence\" AND buyer-country=DEU AND notice-type IN (can-standard can-social can-desg) AND publication-date>=20260101"
                 }

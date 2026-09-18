@@ -2,7 +2,7 @@ use crate::tools::{tools_call, tools_list};
 use crate::resources::{resources_list, resources_read};
 
 use actix_web::{web, HttpResponse, Result, HttpRequest};
-use crate::AppState; // adjust to your actual path
+use crate::AppState;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_json;
@@ -165,8 +165,8 @@ pub async fn handle_rpc(
                 // "protocolVersion": "2026-07-28",
                 "capabilities": { "tools": {}, "resources": {} },
                 "serverInfo": {
-                    "name": "rust-mcp",
-                    "title": "rust-mcp",
+                    "name": "ariadne",
+                    "title": "ariadne",
                     "version": "0.1.0",
                     "icons": [
                         {

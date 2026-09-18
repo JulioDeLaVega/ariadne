@@ -16,7 +16,7 @@ pub fn list_resources() -> Vec<ResourceDefinition> {
         uri: TED_SEARCH_GUIDE_URI.to_string(),
         name: "ted-search-guide".to_string(),
         title: "TED Search API Guide".to_string(),
-        description: "Guide for using the TED Search API (for the ted_search and ted_award mcp tools). Use this resource when constructing TED Expert Search queries.".to_string(),
+        description: "Guide for using the TED Search API (for the ted.search_notice and ted.search_award mcp tools). Use this resource when constructing TED Expert Search queries.".to_string(),
         mimetype: "text/markdown".to_string(),
     }]
 }
