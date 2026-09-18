@@ -215,6 +215,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ariadne"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1211,16 +1221,6 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "rust_mcp"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "reqwest",
- "serde",
- "serde_json",
 ]
 
 [[package]]

@@ -1,5 +1,5 @@
 use actix_web::{http::StatusCode, test};
-use rust_mcp::{build_app, default_state};
+use ariadne::{build_app, default_state};
 
 #[actix_web::test]
 async fn test_initialize() {
