@@ -8,4 +8,4 @@ RUN cargo build --release --target x86_64-unknown-linux-musl
 FROM scratch AS runtime
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/ariadne /ariadne
 EXPOSE 8080
-CMD ["/rust_mcp"]
+CMD ["/ariadne"]
