@@ -16,6 +16,12 @@ pub async fn tools_call(client: &Client, config: &Config, name: &str, input: &st
         "cellar.get_resource_legal_information_miscellaneous" => {
             sparql::run_sparql(client, config, sparql::get_resource_legal_information_miscellaneous(input)).await
         }
+        "cellar.get_expressions_based_on_work" => {
+            sparql::run_sparql(client, config, sparql::get_expressions_based_on_work(input)).await
+        }
+        "cellar.get_manifestations_based_on_expression" => {
+            sparql::run_sparql(client, config, sparql::get_manifestations_based_on_expression(input)).await
+        }
         "ted.search_notices" => {
             ted::search_notices(client, input).await
         }

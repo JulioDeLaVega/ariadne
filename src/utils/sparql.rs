@@ -86,3 +86,25 @@ pub fn get_resource_legal_information_miscellaneous(input: &str) -> String {
         }}
         LIMIT 30"#)
 }
+
+pub fn get_expressions_based_on_work(input: &str) -> String {
+    format!(r#"{PREFIX}
+        SELECT DISTINCT ?expression ?language ?title
+        WHERE {{
+            ?expression cdm:expression_belongs_to_work <{input}> .
+            OPTIONAL {{ ?expression cdm:expression_uses_language ?language . }}
+            OPTIONAL {{ ?expression cdm:expression_title ?title . }}
+        }}
+        LIMIT 100"#)
+}
+
+pub fn get_manifestations_based_on_expression(input: &str) -> String {
+    format!(r#"{PREFIX}
+        SELECT DISTINCT ?manifestation ?type ?item
+        WHERE {{
+            ?manifestation cdm:manifestation_manifests_expression <{input}> .
+            OPTIONAL {{ ?manifestation cdm:manifestation_type ?type . }}
+            OPTIONAL {{ ?manifestation cdm:manifestation_has_item ?item . }}
+        }}
+        LIMIT 100"#)
+}

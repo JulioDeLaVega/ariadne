@@ -109,6 +109,34 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             }),
         },
         ToolDefinition {
+            name: "cellar.get_expressions_based_on_work".into(),
+            description: "Retrieve the expressions (language versions) of a work using the EU Publications Office SPARQL endpoint. Given a work's URI (for example obtained via cellar.uri_from_celex), it returns one row per expression with its expression URI, language and title. In the CELLAR data model links point from child to parent (expression_belongs_to_work), so a work's own predicates do not list its expressions and cellar.get_predicates on a work will not reveal them: use this tool instead. Use it as the first step to discover which language versions exist, then pass an expression URI to cellar.get_manifestations_based_on_expression to see the available formats. Language and title may be missing for some expressions.".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "input": {
+                        "type": "string",
+                        "description": "The URI of the work for which to retrieve expressions, e.g. http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1."
+                    }
+                },
+                "required": ["input"]
+            }),
+        },
+        ToolDefinition {
+            name: "cellar.get_manifestations_based_on_expression".into(),
+            description: "Retrieve the manifestations (concrete formats) of an expression using the EU Publications Office SPARQL endpoint. Given an expression's URI (a single language version of a work, for example obtained via cellar.get_expressions_based_on_work), it returns the manifestation URI, its manifestation_type (for example pdfa1a, fmx4 for Formex 4 XML, or xhtml) and the item URIs holding the actual files. A manifestation can have several items, so a manifestation may appear on multiple rows. In the CELLAR data model links point from child to parent (manifestation_manifests_expression), so an expression's own predicates do not list its manifestations: use this tool instead. Use it to check which formats are available for a given document and language before downloading.".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "input": {
+                        "type": "string",
+                        "description": "The URI of the expression for which to retrieve manifestations, e.g. http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1.0006 (the English version of the GDPR)."
+                    }
+                },
+                "required": ["input"]
+            }),
+        },
+        ToolDefinition {
             name: "ted.search_notices".into(),
             description: "Search EU public procurement notices using the official TED Search API.".into(),
             input_schema: json!({

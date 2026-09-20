@@ -54,7 +54,7 @@ async fn test_unknown_tool_returns_error_payload() {
 }
 
 #[actix_web::test]
-async fn test_tool_eurlex_url() {
+async fn test_tool_eurlex_get_document() {
     let app = test::init_service(build_app(default_state())).await;
 
     let req = test::TestRequest::post()
@@ -64,7 +64,7 @@ async fn test_tool_eurlex_url() {
             "id": 4,
             "method": "tools/call",
             "params": {
-                "name": "eurlex_url",
+                "name": "eurlex.get_document",
                 "arguments": {
                     "input": "32016R0679"
                 }
@@ -79,7 +79,7 @@ async fn test_tool_eurlex_url() {
 }
 
 #[actix_web::test]
-async fn test_tool_sparql_reg_search() {
+async fn test_tool_cellar_get_works_based_on_keyword() {
     let app = test::init_service(build_app(default_state())).await;
 
     let req = test::TestRequest::post()
@@ -89,7 +89,7 @@ async fn test_tool_sparql_reg_search() {
             "id": 4,
             "method": "tools/call",
             "params": {
-                "name": "sparql_reg_search",
+                "name": "cellar.get_works_based_on_keyword",
                 "arguments": {
                     "input": "data protection"
                 }
