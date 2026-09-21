@@ -165,7 +165,7 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             }),
         },
         ToolDefinition {
-            name: "client.get_text".into(),
+            name: "cellar.get_manifestation_content".into(),
             description: "Fetch the text of a Eur-Lex document or other text resource. For a Eur-Lex legal act, first use eurlex.uri_from_celex to find the work URI, then eurlex.get_expressions_based_on_work to find the desired language expression, and finally eurlex.get_manifestations_based_on_expression to find the desired manifestation URI. Pass that manifestation URI to this tool. The optional Accept and language parameters can be used to request a specific representation and language.".into(),
             input_schema: json!({
                 "type": "object",

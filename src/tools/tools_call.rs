@@ -2,10 +2,8 @@ use crate::utils::{cellar, Client, Config, ToolError, ted};
 
 pub async fn tools_call(client: &Client, config: &Config, name: &str, arguments: &serde_json::Value) -> Result<String, ToolError> {
     match name {
-        // "eurlex.get_document" => eurlex::get_document(client, config, input).await,
-        "client.get_text" => client.get_text(arguments).await.map_err(ToolError::from),
+        "cellar.get_manifestation_content" => cellar::get_manifestation_content(client, arguments).await,
         "cellar.get_works_based_on_keyword" => cellar::run_sparql_query(client, config, cellar::get_works_based_on_keyword(arguments)).await,
-        // "cellar.get_related_acts" => cellar::run_sparql_query(client, config, cellar::get_related_acts(arguments)).await,
         "cellar.get_predicates" => cellar::run_sparql_query(client, config, cellar::get_predicates(arguments)).await,
         "cellar.uri_from_celex" => cellar::run_sparql_query(client, config, cellar::uri_from_celex(arguments)).await,
         "cellar.get_objects_based_on_uri" => {

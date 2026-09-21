@@ -1,3 +1,5 @@
+use reqwest::header::{HeaderMap};
+
 #[derive(Clone)]
 pub struct Client {
     inner: reqwest::Client,
@@ -10,32 +12,13 @@ impl Client {
 
     pub async fn get_text(
         &self,
-        arguments: &serde_json::Value,
+        url: &str,
+        headers: HeaderMap,
     ) -> Result<String, reqwest::Error> {
-        let url = arguments
-            .get("url")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-
-        let accept = arguments
-            .get("accept")
-            .and_then(|v| v.as_str());
-
-        let language = arguments
-            .get("language")
-            .and_then(|v| v.as_str());
-
-        let mut request = self.inner.get(url);
-
-        if let Some(accept) = accept {
-            request = request.header("Accept", accept);
-        }
-
-        if let Some(language) = language {
-            request = request.header("Accept-Language", language);
-        }
-
-        let text = request
+        let text = self
+            .inner
+            .get(url)
+            .headers(headers)
             .send()
             .await?
             .error_for_status()?

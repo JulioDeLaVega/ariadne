@@ -1,4 +1,5 @@
 use crate::utils::{Client, ToolError, Config};
+use reqwest::header::{HeaderMap, ACCEPT, ACCEPT_LANGUAGE};
 
 const PREFIX: &str = "PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>";
 
@@ -127,4 +128,32 @@ pub fn get_manifestations_based_on_expression(arguments: &serde_json::Value) -> 
         }}
         LIMIT 100"#)
 
+}
+
+pub async fn get_manifestation_content(
+    client: &Client,
+    arguments: &serde_json::Value,
+) -> Result<String, ToolError> {
+    let url = arguments
+        .get("url")
+        .and_then(|v| v.as_str())
+        .ok_or(ToolError::MissingInput)?;
+
+    let mut headers = HeaderMap::new();
+
+    if let Some(value) = arguments.get("accept").and_then(|v| v.as_str()) {
+        headers.insert(
+            ACCEPT,
+            value.parse().map_err(|_| ToolError::MissingInput)?,
+        );
+    }
+
+    if let Some(value) = arguments.get("language").and_then(|v| v.as_str()) {
+        headers.insert(
+            ACCEPT_LANGUAGE,
+            value.parse().map_err(|_| ToolError::MissingInput)?,
+        );
+    }
+
+    Ok(client.get_text(url, headers).await?)
 }

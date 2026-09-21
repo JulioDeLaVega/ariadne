@@ -210,25 +210,51 @@ async fn test_tool_ted_award() {
 }
 
 #[actix_web::test]
-async fn test_client_get_text_gdpr_xhtml() {
-    let client = ariadne::utils::Client::new();
+async fn test_tool_fetch_gdpr_xhtml() {
+    let app = test::init_service(build_app(default_state())).await;
 
-    let arguments = serde_json::json!({
-        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679",
-        "accept": "application/xhtml+xml",
-        "language": "en"
-    });
+    let req = test::TestRequest::post()
+        .uri("/mcp")
+        .set_json(serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "tools/call",
+            "params": {
+                "name": "cellar.get_manifestation_content",
+                "arguments": {
+                    "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679",
+                    "accept": "application/xhtml+xml",
+                    "language": "en"
+                }
+            }
+        }))
+        .to_request();
 
-    let text = client
-        .get_text(&arguments)
-        .await
-        .expect("failed to fetch GDPR XHTML document");
+    let resp = test::call_service(&app, req).await;
+
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let body: serde_json::Value = test::read_body_json(resp).await;
+
+    assert_eq!(body["jsonrpc"], "2.0");
+    assert_eq!(body["id"], 7);
+
+    let is_error = body["result"]["isError"].as_bool().unwrap_or(false);
+
+    assert!(
+        !is_error,
+        "fetch returned an error: {body}"
+    );
+
+    let text = body["result"]["content"][0]["text"]
+        .as_str()
+        .expect("expected fetch result to contain text");
 
     assert!(!text.is_empty(), "expected non-empty text response");
 
     assert!(
         text.chars().count() <= 500,
-        "expected get_text to return at most 500 characters, got {}",
+        "expected fetch to return at most 500 characters, got {}",
         text.chars().count()
     );
 }
