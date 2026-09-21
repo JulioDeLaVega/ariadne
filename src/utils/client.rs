@@ -8,8 +8,41 @@ impl Client {
         Self { inner: reqwest::Client::new() }
     }
 
-    pub async fn get_text(&self, url: &str) -> Result<String, reqwest::Error> {
-        self.inner.get(url).send().await?.text().await
+    pub async fn get_text(
+        &self,
+        arguments: &serde_json::Value,
+    ) -> Result<String, reqwest::Error> {
+        let url = arguments
+            .get("url")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        let accept = arguments
+            .get("accept")
+            .and_then(|v| v.as_str());
+
+        let language = arguments
+            .get("language")
+            .and_then(|v| v.as_str());
+
+        let mut request = self.inner.get(url);
+
+        if let Some(accept) = accept {
+            request = request.header("Accept", accept);
+        }
+
+        if let Some(language) = language {
+            request = request.header("Accept-Language", language);
+        }
+
+        let text = request
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+
+        Ok(text.chars().take(500).collect())
     }
 
     pub async fn sparql_query(&self, endpoint: &str, query: &str) -> Result<String, reqwest::Error> {

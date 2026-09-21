@@ -24,10 +24,10 @@ fn remove_links(response: &str) -> Result<String, ToolError> {
 
 pub async fn search_notices(
     client: &Client,
-    input: &str,
+    arguments: &serde_json::Value,
 ) -> Result<String, ToolError> {
     let body = json!({
-        "query": input,
+        "query": arguments.get("query").and_then(|v| v.as_str()).unwrap_or(""),
         "fields": [
             "publication-number",
             "publication-date",
@@ -58,10 +58,10 @@ pub async fn search_notices(
 
 pub async fn search_awards(
     client: &Client,
-    input: &str,
+    arguments: &serde_json::Value,
 ) -> Result<String, ToolError> {
     let body = json!({
-        "query": input,
+        "query": arguments.get("query").and_then(|v| v.as_str()).unwrap_or(""),
         "fields": [
             "publication-number",
             "publication-date",

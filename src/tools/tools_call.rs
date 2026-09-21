@@ -1,32 +1,33 @@
-use crate::utils::{eurlex, sparql, Client, Config, ToolError, ted};
+use crate::utils::{cellar, Client, Config, ToolError, ted};
 
-pub async fn tools_call(client: &Client, config: &Config, name: &str, input: &str,) -> Result<String, ToolError> {
+pub async fn tools_call(client: &Client, config: &Config, name: &str, arguments: &serde_json::Value) -> Result<String, ToolError> {
     match name {
-        "eurlex.get_document" => eurlex::get_document(client, config, input).await,
-        "cellar.get_works_based_on_keyword" => sparql::run_sparql(client, config, sparql::get_works_based_on_keyword(input)).await,
-        "cellar.get_related_acts" => sparql::run_sparql(client, config, sparql::get_related_acts(input)).await,
-        "cellar.get_predicates" => sparql::run_sparql(client, config, sparql::get_predicates(input)).await,
-        "cellar.uri_from_celex" => sparql::run_sparql(client, config, sparql::uri_from_celex(input)).await,
+        // "eurlex.get_document" => eurlex::get_document(client, config, input).await,
+        "client.get_text" => client.get_text(arguments).await.map_err(ToolError::from),
+        "cellar.get_works_based_on_keyword" => cellar::run_sparql_query(client, config, cellar::get_works_based_on_keyword(arguments)).await,
+        // "cellar.get_related_acts" => cellar::run_sparql_query(client, config, cellar::get_related_acts(arguments)).await,
+        "cellar.get_predicates" => cellar::run_sparql_query(client, config, cellar::get_predicates(arguments)).await,
+        "cellar.uri_from_celex" => cellar::run_sparql_query(client, config, cellar::uri_from_celex(arguments)).await,
         "cellar.get_objects_based_on_uri" => {
-            sparql::run_sparql(client, config, sparql::get_objects_based_on_uri(input)).await
+            cellar::run_sparql_query(client, config, cellar::get_objects_based_on_uri(arguments)).await
         }
         "cellar.get_resource_adopts_resource" => {
-            sparql::run_sparql(client, config, sparql::get_resource_adopts_resource(input)).await
+            cellar::run_sparql_query(client, config, cellar::get_resource_adopts_resource(arguments)).await
         }
         "cellar.get_resource_legal_information_miscellaneous" => {
-            sparql::run_sparql(client, config, sparql::get_resource_legal_information_miscellaneous(input)).await
+            cellar::run_sparql_query(client, config, cellar::get_resource_legal_information_miscellaneous(arguments)).await
         }
         "cellar.get_expressions_based_on_work" => {
-            sparql::run_sparql(client, config, sparql::get_expressions_based_on_work(input)).await
+            cellar::run_sparql_query(client, config, cellar::get_expressions_based_on_work(arguments)).await
         }
         "cellar.get_manifestations_based_on_expression" => {
-            sparql::run_sparql(client, config, sparql::get_manifestations_based_on_expression(input)).await
+            cellar::run_sparql_query(client, config, cellar::get_manifestations_based_on_expression(arguments)).await
         }
         "ted.search_notices" => {
-            ted::search_notices(client, input).await
+            ted::search_notices(client, arguments).await
         }
         "ted.search_awards" => {
-            ted::search_awards(client, input).await
+            ted::search_awards(client, arguments).await
         }
 
         other => Err(ToolError::UnknownTool(other.to_string())),

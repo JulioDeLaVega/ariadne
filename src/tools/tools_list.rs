@@ -30,12 +30,12 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             input_schema: json!({
                 "type": "object",
                 "properties": {
-                    "input": {
+                    "text": {
                         "type": "string",
                         "description": "A keyword or phrase to search for within EU regulation titles (e.g. 'data protection'). Matched case-insensitively as a substring."
                     }
                 },
-                "required": ["input"]
+                "required": ["text"]
             }),
         },
         ToolDefinition {
@@ -44,12 +44,12 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             input_schema: json!({
                 "type": "object",
                 "properties": {
-                    "input": {
+                    "uri": {
                         "type": "string",
                         "description": "The URI of the subject for which to retrieve predicates and objects."
                     }
                 },
-                "required": ["input"]
+                "required": ["uri"]
             }),
         },
         ToolDefinition {
@@ -58,12 +58,12 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             input_schema: json!({
                 "type": "object",
                 "properties": {
-                    "input": {
+                    "celex": {
                         "type": "string",
                         "description": "The CELEX number for which to retrieve the URI."
                     }
                 },
-                "required": ["input"]
+                "required": ["celex"]
             }),
         },
         ToolDefinition {
@@ -72,12 +72,12 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             input_schema: json!({
                 "type": "object",
                 "properties": {
-                    "input": {
+                    "uri": {
                         "type": "string",
                         "description": "The URI for which to retrieve resources."
                     }
                 },
-                "required": ["input"]
+                "required": ["uri"]
             }),
         },
         ToolDefinition {
@@ -86,12 +86,12 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             input_schema: json!({
                 "type": "object",
                 "properties": {
-                    "input": {
+                    "uri": {
                         "type": "string",
                         "description": "The URI for which to retrieve the adopted act legal act."
                     }
                 },
-                "required": ["input"]
+                "required": ["uri"]
             }),
         },
         ToolDefinition {
@@ -100,12 +100,12 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             input_schema: json!({
                 "type": "object",
                 "properties": {
-                    "input": {
+                    "text": {
                         "type": "string",
                         "description": "The legal information miscellaneous value for which to retrieve the resources. If you look for procedural acts, the procedure number."
                     }
                 },
-                "required": ["input"]
+                "required": ["text"]
             }),
         },
         ToolDefinition {
@@ -114,12 +114,12 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             input_schema: json!({
                 "type": "object",
                 "properties": {
-                    "input": {
+                    "uri": {
                         "type": "string",
                         "description": "The URI of the work for which to retrieve expressions, e.g. http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1."
                     }
                 },
-                "required": ["input"]
+                "required": ["uri"]
             }),
         },
         ToolDefinition {
@@ -128,12 +128,12 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             input_schema: json!({
                 "type": "object",
                 "properties": {
-                    "input": {
+                    "uri": {
                         "type": "string",
                         "description": "The URI of the expression for which to retrieve manifestations, e.g. http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1.0006 (the English version of the GDPR)."
                     }
                 },
-                "required": ["input"]
+                "required": ["uri"]
             }),
         },
         ToolDefinition {
@@ -142,12 +142,12 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             input_schema: json!({
                 "type": "object",
                 "properties": {
-                    "input": {
+                    "query": {
                         "type": "string",
                         "description": "TED search query using the TED Search API query syntax. Use the language of the target country in the query for best results. Use the resource ted-search-guide to learn how to construct queries for the TED Search API."
                     }
                 },
-                "required": ["input"]
+                "required": ["query"]
             }),
         },
         ToolDefinition {
@@ -156,12 +156,34 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             input_schema: json!({
                 "type": "object",
                 "properties": {
-                    "input": {
+                    "query": {
                         "type": "string",
                         "description": "TED search query using the TED Search API query syntax. Use the language of the target country in the query for best results. Use the resource ted-search-guide to learn how to construct queries for the TED Search API."
                     }
                 },
-                "required": ["input"]
+                "required": ["query"]
+            }),
+        },
+        ToolDefinition {
+            name: "client.get_text".into(),
+            description: "Fetch the text of a Eur-Lex document or other text resource. For a Eur-Lex legal act, first use eurlex.uri_from_celex to find the work URI, then eurlex.get_expressions_based_on_work to find the desired language expression, and finally eurlex.get_manifestations_based_on_expression to find the desired manifestation URI. Pass that manifestation URI to this tool. The optional Accept and language parameters can be used to request a specific representation and language.".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "URL of the resource to fetch. For Eur-Lex documents, this should normally be a manifestation URI obtained through eurlex.uri_from_celex → eurlex.get_expressions_based_on_work → eurlex.get_manifestations_based_on_expression."
+                    },
+                    "accept": {
+                        "type": "string",
+                        "description": "Optional HTTP Accept header specifying the desired response format, for example 'application/xhtml+xml', 'application/pdf;type=pdfa1a', or 'application/zip;mtype=fmx4'."
+                    },
+                    "language": {
+                        "type": "string",
+                        "description": "Optional language for the requested resource using a language code such as 'eng', 'fra', or 'deu'."
+                    }
+                },
+                "required": ["url"]
             }),
         },
     ]

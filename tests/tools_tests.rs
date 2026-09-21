@@ -158,7 +158,7 @@ async fn test_tool_ted_search() {
             "params": {
                 "name": "ted.search_notices",
                 "arguments": {
-                    "input": "FT~\"artificial intelligence\" AND buyer-country=DEU AND publication-date>=20260101"
+                    "query": "FT~\"artificial intelligence\" AND buyer-country=DEU AND publication-date>=20260101"
                 }
             }
         }))
@@ -190,7 +190,7 @@ async fn test_tool_ted_award() {
             "params": {
                 "name": "ted.search_awards",
                 "arguments": {
-                    "input": "FT~\"artificial intelligence\" AND buyer-country=DEU AND notice-type IN (can-standard can-social can-desg) AND publication-date>=20260101"
+                    "query": "FT~\"artificial intelligence\" AND buyer-country=DEU AND notice-type IN (can-standard can-social can-desg) AND publication-date>=20260101"
                 }
             }
         }))
@@ -207,4 +207,28 @@ async fn test_tool_ted_award() {
 
     let is_error = body["result"]["isError"].as_bool().unwrap_or(false);
     assert!(!is_error, "TED award search returned an error: {body}");
+}
+
+#[actix_web::test]
+async fn test_client_get_text_gdpr_xhtml() {
+    let client = ariadne::utils::Client::new();
+
+    let arguments = serde_json::json!({
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679",
+        "accept": "application/xhtml+xml",
+        "language": "en"
+    });
+
+    let text = client
+        .get_text(&arguments)
+        .await
+        .expect("failed to fetch GDPR XHTML document");
+
+    assert!(!text.is_empty(), "expected non-empty text response");
+
+    assert!(
+        text.chars().count() <= 500,
+        "expected get_text to return at most 500 characters, got {}",
+        text.chars().count()
+    );
 }

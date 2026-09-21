@@ -2,11 +2,12 @@ use crate::utils::{Client, ToolError, Config};
 
 const PREFIX: &str = "PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>";
 
-pub async fn run_sparql(client: &Client, config: &Config, query: String) -> Result<String, ToolError> {
+pub async fn run_sparql_query(client: &Client, config: &Config, query: String) -> Result<String, ToolError> {
     client.sparql_query(&config.sparql_endpoint, &query).await.map_err(ToolError::from)
 }
 
-pub fn get_works_based_on_keyword(input: &str) -> String {
+pub fn get_works_based_on_keyword(arguments: &serde_json::Value) -> String {
+    let text = arguments.get("text").and_then(|v| v.as_str()).unwrap_or("");
     format!(r#"{PREFIX}
         SELECT DISTINCT ?work ?celex ?title
         WHERE {{
@@ -14,34 +15,38 @@ pub fn get_works_based_on_keyword(input: &str) -> String {
         ?work cdm:resource_legal_id_celex ?celex .
         ?expr cdm:expression_belongs_to_work ?work .
         ?expr cdm:expression_title ?title .
-        FILTER(CONTAINS(LCASE(STR(?title)), LCASE("{input}")))
+        FILTER(CONTAINS(LCASE(STR(?title)), LCASE("{text}")))
         FILTER(lang(?title) = "en" || lang(?title) = "")
         }}
         LIMIT 3"#)
 }
 
-pub fn get_related_acts(input: &str) -> String {
-    format!(r#"{PREFIX}
-        SELECT DISTINCT ?work ?celex ?procedure
-        WHERE {{
-            ?work cdm:resource_legal_information_miscellaneous ?procedure .
-            FILTER(CONTAINS(LCASE(STR(?procedure)), LCASE(STR("{input}"))))
-            OPTIONAL {{ ?work cdm:resource_legal_id_celex ?celex . }}
-        }}
-        LIMIT 30"#)
-}
+// pub fn get_related_acts(input: &str) -> String {
+//     format!(r#"{PREFIX}
+//         SELECT DISTINCT ?work ?celex ?procedure
+//         WHERE {{
+//             ?work cdm:resource_legal_information_miscellaneous ?procedure .
+//             FILTER(CONTAINS(LCASE(STR(?procedure)), LCASE(STR("{input}"))))
+//             OPTIONAL {{ ?work cdm:resource_legal_id_celex ?celex . }}
+//         }}
+//         LIMIT 30"#)
+// }
 
-pub fn get_predicates(input: &str) -> String {
+pub fn get_predicates(arguments: &serde_json::Value) -> String {
+    let uri = arguments.get("uri").and_then(|v| v.as_str()).unwrap_or("");
     format!(r#"{PREFIX}
         SELECT DISTINCT ?predicate ?object
         WHERE {{
-            <{input}> ?predicate ?object .
+            <{uri}> ?predicate ?object .
         }}
         LIMIT 200"#)
 }
 
-pub fn uri_from_celex(input: &str) -> String {
-    let input = input.to_lowercase();
+pub fn uri_from_celex(arguments: &serde_json::Value) -> String {
+
+    let celex = arguments.get("celex").and_then(|v| v.as_str()).unwrap_or("");
+    let input = celex.to_lowercase();
+
     format!(r#"{PREFIX}
         SELECT DISTINCT ?work ?celex
         WHERE {{
@@ -49,13 +54,15 @@ pub fn uri_from_celex(input: &str) -> String {
         FILTER(LCASE(STR(?celex)) = "{input}")
         }}
         LIMIT 3"#)
+
 }
 
-pub fn get_objects_based_on_uri(input: &str) -> String {
+pub fn get_objects_based_on_uri(arguments: &serde_json::Value) -> String {
+    let uri = arguments.get("uri").and_then(|v| v.as_str()).unwrap_or("");
     format!(r#"{PREFIX}
         SELECT DISTINCT ?subject ?celex ?type ?resourceType ?title ?date
         WHERE {{
-            ?subject cdm:resource_legal_based_on_resource_legal <{input}> .
+            ?subject cdm:resource_legal_based_on_resource_legal <{uri}> .
             OPTIONAL {{ ?subject cdm:resource_legal_id_celex ?celex . }}
             OPTIONAL {{ ?subject cdm:resource_legal_type ?type . }}
             OPTIONAL {{ ?subject cdm:work_has_resource-type ?resourceType . }}
@@ -65,46 +72,59 @@ pub fn get_objects_based_on_uri(input: &str) -> String {
         LIMIT 200"#)
 }
 
-pub fn get_resource_adopts_resource(input: &str) -> String {
+pub fn get_resource_adopts_resource(arguments: &serde_json::Value) -> String {
+    let uri = arguments.get("uri").and_then(|v| v.as_str()).unwrap_or("");
     format!(r#"{PREFIX}
         SELECT ?object
         WHERE {{
-        <{input}> cdm:resource_legal_adopts_resource_legal ?object .
+        <{uri}> cdm:resource_legal_adopts_resource_legal ?object .
         }}
         LIMIT 2"#)
 }
 
-pub fn get_resource_legal_information_miscellaneous(input: &str) -> String {
+pub fn get_resource_legal_information_miscellaneous(arguments: &serde_json::Value) -> String {
+    
+    let text = arguments.get("text").and_then(|v| v.as_str()).unwrap_or("");
+
     format!(r#"{PREFIX}
         SELECT DISTINCT ?subject ?celex
         WHERE {{
             ?subject cdm:resource_legal_information_miscellaneous ?procedure .
-            FILTER(CONTAINS(LCASE(STR(?procedure)), LCASE("{input}")))
+            FILTER(CONTAINS(LCASE(STR(?procedure)), LCASE("{text}")))
             OPTIONAL {{
                 ?subject cdm:resource_legal_id_celex ?celex .
             }}
         }}
         LIMIT 30"#)
+
 }
 
-pub fn get_expressions_based_on_work(input: &str) -> String {
+pub fn get_expressions_based_on_work(arguments: &serde_json::Value) -> String {
+
+    let uri = arguments.get("uri").and_then(|v| v.as_str()).unwrap_or("");
+
     format!(r#"{PREFIX}
         SELECT DISTINCT ?expression ?language ?title
         WHERE {{
-            ?expression cdm:expression_belongs_to_work <{input}> .
+            ?expression cdm:expression_belongs_to_work <{uri}> .
             OPTIONAL {{ ?expression cdm:expression_uses_language ?language . }}
             OPTIONAL {{ ?expression cdm:expression_title ?title . }}
         }}
         LIMIT 100"#)
+
 }
 
-pub fn get_manifestations_based_on_expression(input: &str) -> String {
+pub fn get_manifestations_based_on_expression(arguments: &serde_json::Value) -> String {
+
+    let uri = arguments.get("uri").and_then(|v| v.as_str()).unwrap_or("");
+
     format!(r#"{PREFIX}
         SELECT DISTINCT ?manifestation ?type ?item
         WHERE {{
-            ?manifestation cdm:manifestation_manifests_expression <{input}> .
+            ?manifestation cdm:manifestation_manifests_expression <{uri}> .
             OPTIONAL {{ ?manifestation cdm:manifestation_type ?type . }}
             OPTIONAL {{ ?manifestation cdm:manifestation_has_item ?item . }}
         }}
         LIMIT 100"#)
+
 }
