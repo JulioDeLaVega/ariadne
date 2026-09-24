@@ -176,7 +176,7 @@ pub fn tools_list() -> Vec<ToolDefinition> {
                     },
                     "accept": {
                         "type": "string",
-                        "description": "Optional HTTP Accept header specifying the desired response format, for example 'application/xhtml+xml', 'application/pdf;type=pdfa1a', or 'application/zip;mtype=fmx4'."
+                        "description": "Optional HTTP Accept header specifying the desired response format, for example 'application/xhtml+xml', 'application/pdf;type=pdfa1a', or 'application/xml;type=fmx4'."
                     },
                     "language": {
                         "type": "string",

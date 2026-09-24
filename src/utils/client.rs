@@ -10,22 +10,20 @@ impl Client {
         Self { inner: reqwest::Client::new() }
     }
 
-    pub async fn get_text(
+    pub async fn get_bytes(
         &self,
         url: &str,
         headers: HeaderMap,
-    ) -> Result<String, reqwest::Error> {
-        let text = self
-            .inner
+    ) -> Result<Vec<u8>, reqwest::Error> {
+        self.inner
             .get(url)
             .headers(headers)
             .send()
             .await?
             .error_for_status()?
-            .text()
-            .await?;
-
-        Ok(text.chars().take(500).collect())
+            .bytes()
+            .await
+            .map(|bytes| bytes.to_vec())
     }
 
     pub async fn sparql_query(&self, endpoint: &str, query: &str) -> Result<String, reqwest::Error> {

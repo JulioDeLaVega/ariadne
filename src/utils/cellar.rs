@@ -130,12 +130,19 @@ pub fn get_manifestations_based_on_expression(arguments: &serde_json::Value) -> 
 
 }
 
+use crate::utils::{parse_fmx4, parse_pdf, parse_xhtml};
+
 pub async fn get_manifestation_content(
     client: &Client,
     arguments: &serde_json::Value,
 ) -> Result<String, ToolError> {
     let url = arguments
         .get("url")
+        .and_then(|v| v.as_str())
+        .ok_or(ToolError::MissingInput)?;
+
+    let format = arguments
+        .get("accept")
         .and_then(|v| v.as_str())
         .ok_or(ToolError::MissingInput)?;
 
@@ -155,5 +162,16 @@ pub async fn get_manifestation_content(
         );
     }
 
-    Ok(client.get_text(url, headers).await?)
+    let bytes = client.get_bytes(url, headers).await?;
+
+    println!("Fetched {} bytes from {}", bytes.len(), url);
+
+    let text = match format {
+        "application/xml;type=fmx4" | "application/fmx4" => parse_fmx4(&bytes)?,
+        "xhtml" | "application/xhtml+xml" => parse_xhtml(&bytes)?,
+        "pdf" | "application/pdf" | "pdfa1a" | "application/pdf;type=pdfa1a" => parse_pdf(&bytes)?,
+        _ => return Err(ToolError::InvalidInput),
+    };
+
+    Ok(text.chars().take(500).collect())
 }

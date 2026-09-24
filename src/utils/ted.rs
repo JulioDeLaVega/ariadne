@@ -1,7 +1,7 @@
 use serde_json::{json, Value};
-use crate::utils::{Client, ToolError};
+use crate::utils::{Client, ToolError, Config};
 
-const TED_SEARCH_URL: &str = "https://api.ted.europa.eu/v3/notices/search";
+// const TED_SEARCH_URL: &str = "https://api.ted.europa.eu/v3/notices/search";
 
 fn remove_links(response: &str) -> Result<String, ToolError> {
     let mut data: Value = serde_json::from_str(response)
@@ -49,7 +49,7 @@ pub async fn search_notices(
     });
 
     let response = client
-        .post_json(TED_SEARCH_URL, &body)
+        .post_json(&Config::default().ted_endpoint, &body)
         .await
         .map_err(|e| ToolError::Http(e.to_string()))?;
 
@@ -82,7 +82,7 @@ pub async fn search_awards(
     });
 
     let response = client
-        .post_json(TED_SEARCH_URL, &body)
+        .post_json(&Config::default().ted_endpoint, &body)
         .await
         .map_err(|e| ToolError::Http(e.to_string()))?;
 
