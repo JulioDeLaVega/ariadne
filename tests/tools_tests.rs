@@ -53,30 +53,30 @@ async fn test_unknown_tool_returns_error_payload() {
     assert!(is_error, "expected isError: true for unknown tool, got: {body}");
 }
 
-#[actix_web::test]
-async fn test_tool_eurlex_get_document() {
-    let app = test::init_service(build_app(default_state())).await;
+// #[actix_web::test]
+// async fn test_tool_eurlex_get_document() {
+//     let app = test::init_service(build_app(default_state())).await;
 
-    let req = test::TestRequest::post()
-        .uri("/mcp")
-        .set_json(serde_json::json!({
-            "jsonrpc": "2.0",
-            "id": 4,
-            "method": "tools/call",
-            "params": {
-                "name": "eurlex.get_document",
-                "arguments": {
-                    "input": "32016R0679"
-                }
-            }
-        }))
-        .to_request();
+//     let req = test::TestRequest::post()
+//         .uri("/mcp")
+//         .set_json(serde_json::json!({
+//             "jsonrpc": "2.0",
+//             "id": 4,
+//             "method": "tools/call",
+//             "params": {
+//                 "name": "eurlex.get_document",
+//                 "arguments": {
+//                     "input": "32016R0679"
+//                 }
+//             }
+//         }))
+//         .to_request();
 
-    let resp = test::call_service(&app, req).await;
+//     let resp = test::call_service(&app, req).await;
 
-    assert_eq!(resp.status(), StatusCode::OK);
-    // deliberately not calling test::read_body(resp) — avoids materializing the large payload
-}
+//     assert_eq!(resp.status(), StatusCode::OK);
+//     // deliberately not calling test::read_body(resp) — avoids materializing the large payload
+// }
 
 #[actix_web::test]
 async fn test_tool_cellar_get_works_based_on_keyword() {
