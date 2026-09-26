@@ -209,62 +209,15 @@ async fn test_tool_ted_award() {
     assert!(!is_error, "TED award search returned an error: {body}");
 }
 
-// #[actix_web::test]
-// async fn test_tool_fetch_gdpr_xhtml() {
-//     let app = test::init_service(build_app(default_state())).await;
-
-//     let req = test::TestRequest::post()
-//         .uri("/mcp")
-//         .set_json(serde_json::json!({
-//             "jsonrpc": "2.0",
-//             "id": 7,
-//             "method": "tools/call",
-//             "params": {
-//                 "name": "cellar.get_manifestation_content",
-//                 "arguments": {
-//                     "url": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1.0006.03",
-//                     "accept": "application/xhtml+xml",
-//                     "language": "en"
-//                 }
-//             }
-//         }))
-//         .to_request();
-
-//     let resp = test::call_service(&app, req).await;
-
-//     assert_eq!(resp.status(), StatusCode::OK);
-
-//     let body: serde_json::Value = test::read_body_json(resp).await;
-
-//     assert_eq!(body["jsonrpc"], "2.0");
-//     assert_eq!(body["id"], 7);
-
-//     let is_error = body["result"]["isError"].as_bool().unwrap_or(false);
-
-//     assert!(
-//         !is_error,
-//         "fetch returned an error: {body}"
-//     );
-
-//     let text = body["result"]["content"][0]["text"]
-//         .as_str()
-//         .expect("expected fetch result to contain text");
-
-//     assert!(!text.is_empty(), "expected non-empty text response");
-
-//     assert!(
-//         text.chars().count() <= 500,
-//         "expected fetch to return at most 500 characters, got {}",
-//         text.chars().count()
-//     );
-// }
-
-async fn assert_manifestation_fetch(
+async fn assert_manifestation_search(
     id: i64,
     url: &str,
     accept: &str,
-    max_chars: usize,
+    regex_pattern: &str,
 ) {
+    const MAX_MATCHES: usize = 5;
+    const MAX_MATCH_LEN: usize = 500;
+
     let app = test::init_service(build_app(default_state())).await;
 
     let req = test::TestRequest::post()
@@ -274,11 +227,12 @@ async fn assert_manifestation_fetch(
             "id": id,
             "method": "tools/call",
             "params": {
-                "name": "cellar.get_manifestation_content",
+                "name": "cellar.get_manifestation_content_with_regex",
                 "arguments": {
                     "url": url,
                     "accept": accept,
-                    "language": "en"
+                    "language": "en",
+                    "regex_pattern": regex_pattern
                 }
             }
         }))
@@ -295,50 +249,52 @@ async fn assert_manifestation_fetch(
 
     let is_error = body["result"]["isError"].as_bool().unwrap_or(false);
 
-    assert!(!is_error, "fetch returned an error for {accept}: {body}");
+    assert!(!is_error, "search returned an error for {accept}: {body}");
 
     let text = body["result"]["content"][0]["text"]
         .as_str()
-        .unwrap_or_else(|| panic!("expected fetch result to contain text for {accept}"));
+        .unwrap_or_else(|| panic!("expected search result to contain text for {accept}"));
 
-    assert!(!text.is_empty(), "expected non-empty text response for {accept}");
+    assert!(!text.is_empty(), "expected non-empty search result for {accept}");
+
+    let match_count = text.split(' ').count();
 
     assert!(
-        text.chars().count() <= max_chars,
-        "expected fetch to return at most {max_chars} characters for {accept}, got {}",
-        text.chars().count()
+        match_count <= MAX_MATCHES * MAX_MATCH_LEN,
+        "expected result for {accept} to stay within fixed bounds (max_matches={MAX_MATCHES}, max_match_len={MAX_MATCH_LEN}), got {} space-separated tokens",
+        match_count
     );
 }
 
 #[actix_web::test]
-async fn test_tool_fetch_gdpr_xhtml() {
-    assert_manifestation_fetch(
+async fn test_tool_search_gdpr_xhtml() {
+    assert_manifestation_search(
         7,
         "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1.0006.03",
         "application/xhtml+xml",
-        500,
+        r"Article \d+.{0,200}",
     )
     .await;
 }
 
 #[actix_web::test]
-async fn test_tool_fetch_gdpr_pdf() {
-    assert_manifestation_fetch(
+async fn test_tool_search_gdpr_pdf() {
+    assert_manifestation_search(
         8,
         "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1.0006.01",
         "application/pdf;type=pdfa1a",
-        500,
+        r"Article \d+.{0,200}",
     )
     .await;
 }
 
 #[actix_web::test]
-async fn test_tool_fetch_gdpr_fmx4() {
-    assert_manifestation_fetch(
+async fn test_tool_search_gdpr_fmx4() {
+    assert_manifestation_search(
         9,
-        "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1.0006.02/DOC_1",
+        "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1.0006.02/DOC_2",
         "application/xml;type=fmx4",
-        500,
+        r"Article \d+.{0,200}",
     )
     .await;
 }

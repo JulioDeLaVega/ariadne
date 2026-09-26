@@ -55,6 +55,9 @@ pub fn parse_fmx4(bytes: &[u8]) -> Result<String, ToolError> {
         buffer.clear();
     }
 
+    println!("Input bytes: {}", bytes.len());
+    println!("Parsed characters: {}", text.chars().count());
+
     Ok(text)
 }
 

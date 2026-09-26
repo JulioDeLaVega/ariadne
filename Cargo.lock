@@ -242,6 +242,7 @@ dependencies = [
  "bytes",
  "lopdf",
  "quick-xml",
+ "regex",
  "reqwest",
  "scraper",
  "serde",

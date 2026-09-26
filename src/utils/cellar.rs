@@ -131,35 +131,25 @@ pub fn get_manifestations_based_on_expression(arguments: &serde_json::Value) -> 
 }
 
 use crate::utils::{parse_fmx4, parse_pdf, parse_xhtml};
+use crate::utils::search_text;
 
-pub async fn get_manifestation_content(
+pub async fn get_manifestation_content_with_regex(
     client: &Client,
     arguments: &serde_json::Value,
 ) -> Result<String, ToolError> {
-    let url = arguments
-        .get("url")
-        .and_then(|v| v.as_str())
-        .ok_or(ToolError::MissingInput)?;
-
-    let format = arguments
-        .get("accept")
-        .and_then(|v| v.as_str())
-        .ok_or(ToolError::MissingInput)?;
+    let url = arguments.get("url").and_then(|v| v.as_str()).ok_or(ToolError::MissingInput)?;
+    let format = arguments.get("accept").and_then(|v| v.as_str());       // Option<&str>
+    let language = arguments.get("language").and_then(|v| v.as_str());   // Option<&str>
+    let regex_pattern = arguments.get("regex_pattern").and_then(|v| v.as_str()).ok_or(ToolError::MissingInput)?;
 
     let mut headers = HeaderMap::new();
 
-    if let Some(value) = arguments.get("accept").and_then(|v| v.as_str()) {
-        headers.insert(
-            ACCEPT,
-            value.parse().map_err(|_| ToolError::MissingInput)?,
-        );
+    if let Some(value) = format {
+        headers.insert(ACCEPT, value.parse().map_err(|_| ToolError::MissingInput)?);
     }
 
-    if let Some(value) = arguments.get("language").and_then(|v| v.as_str()) {
-        headers.insert(
-            ACCEPT_LANGUAGE,
-            value.parse().map_err(|_| ToolError::MissingInput)?,
-        );
+    if let Some(value) = language {
+        headers.insert(ACCEPT_LANGUAGE, value.parse().map_err(|_| ToolError::MissingInput)?);
     }
 
     let bytes = client.get_bytes(url, headers).await?;
@@ -167,11 +157,13 @@ pub async fn get_manifestation_content(
     println!("Fetched {} bytes from {}", bytes.len(), url);
 
     let text = match format {
-        "application/xml;type=fmx4" | "application/fmx4" => parse_fmx4(&bytes)?,
-        "xhtml" | "application/xhtml+xml" => parse_xhtml(&bytes)?,
-        "pdf" | "application/pdf" | "pdfa1a" | "application/pdf;type=pdfa1a" => parse_pdf(&bytes)?,
+        Some("application/xml;type=fmx4") | Some("application/fmx4") => parse_fmx4(&bytes)?,
+        Some("xhtml") | Some("application/xhtml+xml") => parse_xhtml(&bytes)?,
+        Some("pdf") | Some("application/pdf") | Some("pdfa1a") | Some("application/pdf;type=pdfa1a") => parse_pdf(&bytes)?,
         _ => return Err(ToolError::InvalidInput),
     };
 
-    Ok(text.chars().take(500).collect())
+    let retrieved_text = search_text(&text, &regex_pattern, 5, 500)?;
+
+    Ok(retrieved_text.join(" "))
 }

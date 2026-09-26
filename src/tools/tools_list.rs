@@ -165,8 +165,8 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             }),
         },
         ToolDefinition {
-            name: "cellar.get_manifestation_content".into(),
-            description: "Fetch the text of a Eur-Lex document or other text resource. For a Eur-Lex legal act, first use eurlex.uri_from_celex to find the work URI, then eurlex.get_expressions_based_on_work to find the desired language expression, and finally eurlex.get_manifestations_based_on_expression to find the desired manifestation URI. Pass that manifestation URI to this tool. The optional Accept and language parameters can be used to request a specific representation and language.".into(),
+            name: "cellar.get_manifestation_content_with_regex".into(),
+            description: r"Fetch the text of a Eur-Lex document or other text resource and search it for a pattern, returning matching substrings, each capped in length, up to a maximum number of matches, instead of the full document text. For a Eur-Lex legal act, first use eurlex.uri_from_celex to find the work URI, then eurlex.get_expressions_based_on_work to find the desired language expression, and finally eurlex.get_manifestations_based_on_expression to find the desired manifestation URI. Pass that manifestation URI to this tool. The optional Accept and language parameters can be used to request a specific representation and language. The 'pattern' parameter is a regular expression (Rust 'regex' crate syntax, linear-time, no lookahead/lookbehind) used to locate a specific passage - an article, section, clause, or defined term - within the fetched text. There is no separate context parameter: to capture text around a match, include it directly in the pattern, e.g. 'Article \d+.{0,200}' to get 'Article 12' plus up to 200 trailing characters. '.' matches any character including newlines, so bound quantifiers ('{0,200}', not '*' or '+') to keep results predictable and avoid crossing into unrelated sections. Escape literal regex metacharacters (. ( ) [ ] { } + * ? ^ $ \ |) when searching for text containing them, e.g. 'Article 12(a)' becomes 'Article 12\(a\)'. A malformed pattern returns a compile error describing the issue - revise and retry if necessary.".into(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -181,9 +181,13 @@ pub fn tools_list() -> Vec<ToolDefinition> {
                     "language": {
                         "type": "string",
                         "description": "Optional language for the requested resource using a language code such as 'eng', 'fra', or 'deu'."
+                    },
+                    "regex_pattern": {
+                        "type": "string",
+                        "description": "A regular expression (Rust `regex` crate syntax). Include any desired surrounding context directly in the pattern (e.g. `Section 4\\.2.{0,150}` to get the heading plus ~150 trailing characters). No lookaround support."
                     }
                 },
-                "required": ["url"]
+                "required": ["url", "regex_pattern"]
             }),
         },
     ]

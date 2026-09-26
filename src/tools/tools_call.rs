@@ -2,7 +2,7 @@ use crate::utils::{cellar, Client, Config, ToolError, ted};
 
 pub async fn tools_call(client: &Client, config: &Config, name: &str, arguments: &serde_json::Value) -> Result<String, ToolError> {
     match name {
-        "cellar.get_manifestation_content" => cellar::get_manifestation_content(client, arguments).await,
+        "cellar.get_manifestation_content_with_regex" => cellar::get_manifestation_content_with_regex(client, arguments).await,
         "cellar.get_works_based_on_keyword" => cellar::run_sparql_query(client, config, cellar::get_works_based_on_keyword(arguments)).await,
         "cellar.get_predicates" => cellar::run_sparql_query(client, config, cellar::get_predicates(arguments)).await,
         "cellar.uri_from_celex" => cellar::run_sparql_query(client, config, cellar::uri_from_celex(arguments)).await,
