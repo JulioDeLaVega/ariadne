@@ -130,6 +130,7 @@ pub async fn get_manifestation_content_with_regex(
     let format = arguments.get("accept").and_then(|v| v.as_str());       // Option<&str>
     let language = arguments.get("language").and_then(|v| v.as_str());   // Option<&str>
     let regex_pattern = arguments.get("regex_pattern").and_then(|v| v.as_str()).ok_or(ToolError::MissingInput)?;
+    let max_matches = arguments.get("max_matches").and_then(|v| v.as_u64()).unwrap_or(2);
 
     let mut headers = HeaderMap::new();
 
@@ -152,7 +153,7 @@ pub async fn get_manifestation_content_with_regex(
         _ => return Err(ToolError::InvalidInput),
     };
 
-    let retrieved_text = search_text(&text, &regex_pattern, 5, 500)?;
+    let retrieved_text = search_text(&text, &regex_pattern, max_matches as usize, 5000)?;
 
     Ok(format!("{:?}", retrieved_text))
 

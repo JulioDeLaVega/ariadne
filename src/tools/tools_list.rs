@@ -171,6 +171,10 @@ pub fn tools_list() -> Vec<ToolDefinition> {
                         "type": "string",
                         "description": "Optional language for the requested resource using a language code such as 'eng', 'fra', or 'deu'."
                     },
+                    "max_matches": {
+                        "type": "integer",
+                        "description": "Maximum number of matches to return. If you look for something specific, you may want to set this to 5 or 10 so that you can identify where the information is located in the document and then launch a second search with a more specific pattern to extract the exact passage. Default is 2."
+                    },
                     "regex_pattern": {
                         "type": "string",
                         "description": "A regular expression (Rust `regex` crate syntax). Include any desired surrounding context directly in the pattern (e.g. `Section 4\\.2.{0,150}` to get the heading plus ~150 trailing characters). No lookaround support. Be careful that the article and the number itself could be separated by html tags or similar dur to formatting, so you may need to include optional whitespace or html tags in the pattern. For example, to match 'Article 12' in a document that may have html tags between the words, use `Article\\s*<[^>]*>\\s*12`."
