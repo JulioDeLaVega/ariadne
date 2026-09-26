@@ -22,17 +22,6 @@ pub fn get_works_based_on_keyword(arguments: &serde_json::Value) -> String {
         LIMIT 3"#)
 }
 
-// pub fn get_related_acts(input: &str) -> String {
-//     format!(r#"{PREFIX}
-//         SELECT DISTINCT ?work ?celex ?procedure
-//         WHERE {{
-//             ?work cdm:resource_legal_information_miscellaneous ?procedure .
-//             FILTER(CONTAINS(LCASE(STR(?procedure)), LCASE(STR("{input}"))))
-//             OPTIONAL {{ ?work cdm:resource_legal_id_celex ?celex . }}
-//         }}
-//         LIMIT 30"#)
-// }
-
 pub fn get_predicates(arguments: &serde_json::Value) -> String {
     let uri = arguments.get("uri").and_then(|v| v.as_str()).unwrap_or("");
     format!(r#"{PREFIX}
@@ -165,5 +154,6 @@ pub async fn get_manifestation_content_with_regex(
 
     let retrieved_text = search_text(&text, &regex_pattern, 5, 500)?;
 
-    Ok(retrieved_text.join(" "))
+    Ok(format!("{:?}", retrieved_text))
+
 }
