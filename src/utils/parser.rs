@@ -15,12 +15,12 @@ pub fn parse_xhtml(bytes: &[u8]) -> Result<String, ToolError> {
         .next()
         .ok_or(ToolError::InvalidInput)?;
     
-    println!("Body: {:?}", body.inner_html());
-
     let text = body
         .text()
         .collect::<Vec<_>>()
         .join(" ");
+    
+    println!("Parsed characters: {}", text.chars().count());
 
     Ok(text)
 }
@@ -55,8 +55,8 @@ pub fn parse_fmx4(bytes: &[u8]) -> Result<String, ToolError> {
         buffer.clear();
     }
 
-    println!("Input bytes: {}", bytes.len());
-    println!("Parsed characters: {}", text.chars().count());
+    // println!("Input bytes: {}", bytes.len());
+    // println!("Parsed characters: {}", text.chars().count());
 
     Ok(text)
 }

@@ -13,17 +13,6 @@ pub struct ToolDefinition {
 
 pub fn tools_list() -> Vec<ToolDefinition> {
     vec![
-        // ToolDefinition {
-        //     name: "eurlex.get_document".into(),
-        //     description: "Fetch data from the Eurlex URL endpoint. Only use this tool if you need to retrieve the entire data for a specific document. This may result in too much data. For other tasks, use the SPARQL tools instead.".into(),
-        //     input_schema: json!({
-        //         "type": "object",
-        //         "properties": {
-        //             "input": { "type": "string", "description": "The document number to send to the Eurlex URL endpoint" }
-        //         },
-        //         "required": ["input"]
-        //     }),
-        // },
         ToolDefinition {
             name: "cellar.get_works_based_on_keyword".into(),
             description: "Search EU regulations by keyword using the EU Publications Office SPARQL endpoint. Given a search term, finds regulations (resource-type REG) whose title contains that term (case-insensitive, English or language-neutral titles only). Returns up to 3 matching results, each with the work URI, CELEX number, and title. Note: input is a plain keyword/phrase, not a full SPARQL query — it gets substituted into a fixed query template.".into(),
@@ -184,7 +173,7 @@ pub fn tools_list() -> Vec<ToolDefinition> {
                     },
                     "regex_pattern": {
                         "type": "string",
-                        "description": "A regular expression (Rust `regex` crate syntax). Include any desired surrounding context directly in the pattern (e.g. `Section 4\\.2.{0,150}` to get the heading plus ~150 trailing characters). No lookaround support."
+                        "description": "A regular expression (Rust `regex` crate syntax). Include any desired surrounding context directly in the pattern (e.g. `Section 4\\.2.{0,150}` to get the heading plus ~150 trailing characters). No lookaround support. Be careful that the article and the number itself could be separated by html tags or similar dur to formatting, so you may need to include optional whitespace or html tags in the pattern. For example, to match 'Article 12' in a document that may have html tags between the words, use `Article\\s*<[^>]*>\\s*12`."
                     }
                 },
                 "required": ["url", "regex_pattern"]
