@@ -155,13 +155,13 @@ pub fn tools_list() -> Vec<ToolDefinition> {
         },
         ToolDefinition {
             name: "cellar.get_manifestation_content_with_regex".into(),
-            description: r"Fetch the text of a Eur-Lex document or other text resource and search it for a pattern, returning matching substrings, each capped in length, up to a maximum number of matches, instead of the full document text. For a Eur-Lex legal act, first use eurlex.uri_from_celex to find the work URI, then eurlex.get_expressions_based_on_work to find the desired language expression, and finally eurlex.get_manifestations_based_on_expression to find the desired manifestation URI. Pass that manifestation URI to this tool. The optional Accept and language parameters can be used to request a specific representation and language. The 'pattern' parameter is a regular expression (Rust 'regex' crate syntax, linear-time, no lookahead/lookbehind) used to locate a specific passage - an article, section, clause, or defined term - within the fetched text. There is no separate context parameter: to capture text around a match, include it directly in the pattern, e.g. 'Article \d+.{0,200}' to get 'Article 12' plus up to 200 trailing characters. '.' matches any character including newlines, so bound quantifiers ('{0,200}', not '*' or '+') to keep results predictable and avoid crossing into unrelated sections. Escape literal regex metacharacters (. ( ) [ ] { } + * ? ^ $ \ |) when searching for text containing them, e.g. 'Article 12(a)' becomes 'Article 12\(a\)'. A malformed pattern returns a compile error describing the issue - revise and retry if necessary.".into(),
+            description: r"Fetch the text of a cellar document and search it for a pattern, returning matching substrings, each capped in length, up to a maximum number of matches, instead of the full document text. For a cellar legal act, first use cellar.uri_from_celex to find the work URI, then cellar.get_expressions_based_on_work to find the desired language expression, and finally eurlex.get_manifestations_based_on_expression to find the desired manifestation URI. Pass that manifestation URI to this tool. ".into(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
                     "url": {
                         "type": "string",
-                        "description": "URL of the resource to fetch. For Eur-Lex documents, this should normally be a manifestation URI obtained through eurlex.uri_from_celex → eurlex.get_expressions_based_on_work → eurlex.get_manifestations_based_on_expression."
+                        "description": "uri of the resource to fetch. If the uri works but the returned text is empty, you can try to add '/DOC_1' and then '/DOC_2' to the uri, usually the document itself is nested there. Always try first with XHTML, then PDF, then Formex XML (fmx4) if available."
                     },
                     "accept": {
                         "type": "string",
@@ -177,7 +177,7 @@ pub fn tools_list() -> Vec<ToolDefinition> {
                     },
                     "regex_pattern": {
                         "type": "string",
-                        "description": "A regular expression (Rust `regex` crate syntax). Include any desired surrounding context directly in the pattern (e.g. `Section 4\\.2.{0,150}` to get the heading plus ~150 trailing characters). No lookaround support. Be careful that the article and the number itself could be separated by html tags or similar dur to formatting, so you may need to include optional whitespace or html tags in the pattern. For example, to match 'Article 12' in a document that may have html tags between the words, use `Article\\s*<[^>]*>\\s*12`."
+                        "description": r"A regular expression (Rust `regex` crate syntax). Include any desired surrounding context directly in the pattern (e.g. `Section 4\\.2.{0,150}` to get the heading plus ~150 trailing characters). No lookaround support. Be careful that the article and the number itself could be separated by html tags or similar dur to formatting, so you may need to include optional whitespace or html tags in the pattern. For example, to match 'Article 12' in a document that may have html tags between the words, use `Article\\s*<[^>]*>\\s*12`. Escape literal regex metacharacters (. ( ) [ ] { } + * ? ^ $ \ |) when searching for text containing them, e.g. 'Article 12(a)' becomes 'Article 12\(a\)'. A malformed pattern returns a compile error describing the issue - revise and retry if necessary."
                     }
                 },
                 "required": ["url", "regex_pattern"]
