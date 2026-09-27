@@ -173,7 +173,7 @@ pub fn tools_list() -> Vec<ToolDefinition> {
                     },
                     "max_matches": {
                         "type": "integer",
-                        "description": "Maximum number of matches to return. If you look for something specific, you may want to set this to 5 or 10 so that you can identify where the information is located in the document and then launch a second search with a more specific pattern to extract the exact passage. Default is 2."
+                        "description": "Maximum number of matches to return. If you look for something specific, you may want to set this to 5 or 10 so that you can identify where the information is located in the document and then launch a second search with a more specific pattern and a low max_matches (e.g. max_matches = 1) to extract the exact passage. Default is 2."
                     },
                     "regex_pattern": {
                         "type": "string",

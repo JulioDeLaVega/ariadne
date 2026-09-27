@@ -53,31 +53,6 @@ async fn test_unknown_tool_returns_error_payload() {
     assert!(is_error, "expected isError: true for unknown tool, got: {body}");
 }
 
-// #[actix_web::test]
-// async fn test_tool_eurlex_get_document() {
-//     let app = test::init_service(build_app(default_state())).await;
-
-//     let req = test::TestRequest::post()
-//         .uri("/mcp")
-//         .set_json(serde_json::json!({
-//             "jsonrpc": "2.0",
-//             "id": 4,
-//             "method": "tools/call",
-//             "params": {
-//                 "name": "eurlex.get_document",
-//                 "arguments": {
-//                     "input": "32016R0679"
-//                 }
-//             }
-//         }))
-//         .to_request();
-
-//     let resp = test::call_service(&app, req).await;
-
-//     assert_eq!(resp.status(), StatusCode::OK);
-//     // deliberately not calling test::read_body(resp) — avoids materializing the large payload
-// }
-
 #[actix_web::test]
 async fn test_tool_cellar_get_works_based_on_keyword() {
     let app = test::init_service(build_app(default_state())).await;
@@ -215,8 +190,7 @@ async fn assert_manifestation_search(
     accept: &str,
     regex_pattern: &str,
 ) {
-    const MAX_MATCHES: usize = 5;
-    const MAX_MATCH_LEN: usize = 500;
+    const MAX_TOTAL_LEN: usize = 10_000; // e.g. MAX_MATCHES * MAX_MATCH_LEN
 
     let app = test::init_service(build_app(default_state())).await;
 
@@ -257,12 +231,11 @@ async fn assert_manifestation_search(
 
     assert!(!text.is_empty(), "expected non-empty search result for {accept}");
 
-    let match_count = text.split(' ').count();
+    let total_len = text.len();
 
     assert!(
-        match_count <= MAX_MATCHES * MAX_MATCH_LEN,
-        "expected result for {accept} to stay within fixed bounds (max_matches={MAX_MATCHES}, max_match_len={MAX_MATCH_LEN}), got {} space-separated tokens",
-        match_count
+        total_len <= MAX_TOTAL_LEN,
+        "expected full search result for {accept} to stay within {MAX_TOTAL_LEN} chars, got {total_len}",
     );
 }
 

@@ -153,7 +153,7 @@ pub async fn get_manifestation_content_with_regex(
         _ => return Err(ToolError::InvalidInput),
     };
 
-    let retrieved_text = search_text(&text, &regex_pattern, max_matches as usize, 5000)?;
+    let retrieved_text = search_text(&text, &regex_pattern, max_matches as usize, 10000)?;
 
     Ok(format!("{:?}", retrieved_text))
 
