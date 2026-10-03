@@ -82,10 +82,6 @@ pub async fn handle_rpc(
                 }
             };
 
-            // let input = params.arguments.get("input").and_then(|v| v.as_str())
-            //     .unwrap_or("")
-            //     .to_string();
-
             match tools_call::tools_call(&state.client, &state.config, &params.name, &params.arguments).await {
                 Ok(result) => RpcResponse {
                     jsonrpc: "2.0",
