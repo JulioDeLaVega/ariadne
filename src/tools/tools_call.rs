@@ -1,5 +1,5 @@
 use crate::utils::{Client, Config, ToolError};
-use crate::tools::{cellar, ted};
+use crate::tools::{cellar, ted, edgar};
 
 pub async fn tools_call(client: &Client, config: &Config, name: &str, arguments: &serde_json::Value) -> Result<String, ToolError> {
     match name {
@@ -27,6 +27,12 @@ pub async fn tools_call(client: &Client, config: &Config, name: &str, arguments:
         }
         "ted.search_awards" => {
             ted::functions::search_awards(client, arguments).await
+        }
+        "edgar.get_cik" => {
+            edgar::functions::get_cik(client, arguments).await
+        }
+        "edgar.get_company_concepts" => {
+            edgar::functions::get_company_concepts(client, arguments).await
         }
 
         other => Err(ToolError::UnknownTool(other.to_string())),

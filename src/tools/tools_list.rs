@@ -183,5 +183,33 @@ pub fn tools_list() -> Vec<ToolDefinition> {
                 "required": ["url", "regex_pattern"]
             }),
         },
+        ToolDefinition {
+            name: "edgar.get_cik".into(),
+            description: "Resolve a US company ticker symbol to its SEC Central Index Key (CIK) using the SEC EDGAR company ticker database. The ticker lookup is cached in memory after the first request. Returns the CIK as a zero-padded 10-digit string.".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "ticker": {
+                        "type": "string",
+                        "description": "A US company ticker symbol (e.g. 'AAPL', 'MSFT', or 'NVDA')."
+                    }
+                },
+                "required": ["ticker"]
+            }),
+        },
+        ToolDefinition {
+            name: "edgar.get_company_concepts".into(),
+            description: "Fetch SEC EDGAR Company Facts data for a company identified by its CIK. Returns a catalog of the company's reported financial concepts across SEC taxonomies, including concept tags, labels, units, number of facts, and the earliest and latest reporting periods available for each concept. Use this if you want to discover which data you can fetch for a given company CIK".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "cik": {
+                        "type": ["string", "number"],
+                        "description": "The company's SEC Central Index Key (CIK). Accepts a numeric CIK or a string, optionally prefixed with 'CIK'. The CIK must contain up to 10 digits; it is automatically zero-padded to 10 digits (e.g. '320193', '0000320193', or 'CIK0000320193' for Apple Inc.)."
+                    }
+                },
+                "required": ["cik"]
+            }),
+        }
     ]
 }
