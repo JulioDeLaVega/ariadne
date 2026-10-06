@@ -1,5 +1,5 @@
 use serde_json::{json, Value};
-use crate::utils::{Client, ToolError, Config};
+use crate::utils::{ToolError, AppState};
 
 // const TED_SEARCH_URL: &str = "https://api.ted.europa.eu/v3/notices/search";
 
@@ -22,10 +22,7 @@ fn remove_links(response: &str) -> Result<String, ToolError> {
         .map_err(|e| ToolError::Http(e.to_string()))
 }
 
-pub async fn search_notices(
-    client: &Client,
-    arguments: &serde_json::Value,
-) -> Result<String, ToolError> {
+pub async fn search_notices(state: &AppState, arguments: &serde_json::Value) -> Result<String, ToolError> {
     let body = json!({
         "query": arguments.get("query").and_then(|v| v.as_str()).unwrap_or(""),
         "fields": [
@@ -48,8 +45,8 @@ pub async fn search_notices(
         "paginationMode": "ITERATION"
     });
 
-    let response = client
-        .post_json(&Config::default().ted_endpoint, &body)
+    let response = state.client
+        .post_json(&state.config.ted_endpoint, &body)
         .await
         .map_err(|e| ToolError::Http(e.to_string()))?;
 
@@ -57,7 +54,7 @@ pub async fn search_notices(
 }
 
 pub async fn search_awards(
-    client: &Client,
+    state: &AppState,
     arguments: &serde_json::Value,
 ) -> Result<String, ToolError> {
     let body = json!({
@@ -81,8 +78,8 @@ pub async fn search_awards(
         "paginationMode": "ITERATION"
     });
 
-    let response = client
-        .post_json(&Config::default().ted_endpoint, &body)
+    let response = state.client
+        .post_json(&state.config.ted_endpoint, &body)
         .await
         .map_err(|e| ToolError::Http(e.to_string()))?;
 

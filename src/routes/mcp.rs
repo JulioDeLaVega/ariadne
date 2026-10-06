@@ -82,7 +82,7 @@ pub async fn handle_rpc(
                 }
             };
 
-            match tools_call::tools_call(&state.client, &state.config, &params.name, &params.arguments).await {
+            match tools_call::tools_call(&state, &params.name, &params.arguments).await {
                 Ok(result) => RpcResponse {
                     jsonrpc: "2.0",
                     id: body.id.clone(),

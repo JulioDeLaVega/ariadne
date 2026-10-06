@@ -1,4 +1,3 @@
-pub mod state;
 pub mod routes;
 pub mod utils;
 pub mod resources;
@@ -8,8 +7,7 @@ use actix_web::{web, App};
 use actix_web::body::MessageBody;
 use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
 
-use state::AppState;
-use utils::{Client, Config};
+use utils::{Client, Config, AppState};
 
 pub fn build_app(
     app_state: web::Data<AppState>,

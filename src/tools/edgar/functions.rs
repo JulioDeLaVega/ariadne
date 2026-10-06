@@ -1,4 +1,4 @@
-use crate::utils::{Client, Config, ToolError};
+use crate::utils::{ToolError, AppState};
 
 use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT};
 use serde::Deserialize;
@@ -8,12 +8,13 @@ use std::sync::OnceLock;
 
 const SEC_BASE_CIK: &str = "https://www.sec.gov";
 const SEC_BASE_COMPANYFACTS: &str = "https://data.sec.gov/api/xbrl/companyfacts";
+const SEC_BASE_COMPANYCONCEPT: &str = "https://data.sec.gov/api/xbrl/companyconcept";
 
 
 static TICKER_CACHE: OnceLock<HashMap<String, String>> = OnceLock::new();
 
 pub async fn get_cik(
-    client: &Client,
+    state: &AppState,
     arguments: &Value,
 ) -> Result<String, ToolError> {
 
@@ -38,12 +39,12 @@ pub async fn get_cik(
 
     headers.insert(
         USER_AGENT,
-        HeaderValue::from_str(&Config::default().email).map_err(|e| ToolError::Http(e.to_string()))?,
+        HeaderValue::from_str(&state.config.email).map_err(|e| ToolError::Http(e.to_string()))?,
     );
 
     let url = format!("{SEC_BASE_CIK}/files/company_tickers.json");
 
-    let bytes = client
+    let bytes = state.client
         .get_bytes(&url, headers)
         .await
         .map_err(|e| ToolError::Http(e.to_string()))?;
@@ -101,8 +102,8 @@ struct Fact {
     end: String, // ISO date, so string comparison orders correctly
 }
 
-pub async fn get_company_concepts(
-    client: &Client,
+pub async fn get_company_tags(
+    state: &AppState,
     arguments: &Value,
 ) -> Result<String, ToolError> {
     // --- input ---------------------------------------------------------
@@ -127,11 +128,11 @@ pub async fn get_company_concepts(
     let mut headers = HeaderMap::new();
     headers.insert(
         USER_AGENT,
-        HeaderValue::from_str(&Config::default().email).map_err(|e| ToolError::Http(e.to_string()))?,
+        HeaderValue::from_str(&state.config.email).map_err(|e| ToolError::Http(e.to_string()))?,
     );
 
     // --- fetch + parse -------------------------------------------------
-    let bytes = client
+    let bytes = state.client
         .get_bytes(&url, headers)
         .await
         .map_err(|e| ToolError::Http(e.to_string()))?;
@@ -190,4 +191,126 @@ pub async fn get_company_concepts(
     });
 
     serde_json::to_string(&result).map_err(|e| ToolError::Http(e.to_string()))
+}
+
+pub fn trim_output(
+    value: &mut Value,
+    max_chars: usize,
+) {
+    while serialized_len(value) > max_chars {
+        match value {
+            Value::Array(array) if !array.is_empty() => {
+                array.remove(0);
+            }
+            _ => break,
+        }
+    }
+}
+
+fn serialized_len(value: &Value) -> usize {
+    serde_json::to_string(value)
+        .map(|s| s.len())
+        .unwrap_or(usize::MAX)
+}
+
+pub async fn get_company_concept(
+    state: &AppState,
+    arguments: &Value,
+) -> Result<String, ToolError> {
+    // --- input ---------------------------------------------------------
+
+    let cik = match arguments.get("cik") {
+        Some(Value::String(s)) => {
+            s.trim().trim_start_matches("CIK").to_string()
+        }
+        Some(Value::Number(n)) => n.to_string(),
+        _ => return Err(ToolError::MissingInput),
+    };
+
+    if cik.is_empty() {
+        return Err(ToolError::MissingInput);
+    }
+
+    if !cik.chars().all(|c| c.is_ascii_digit()) || cik.len() > 10 {
+        return Err(ToolError::InvalidInput);
+    }
+
+    let taxonomy = match arguments.get("taxonomy") {
+        Some(Value::String(s)) if !s.trim().is_empty() => {
+            s.trim().to_string()
+        }
+        _ => return Err(ToolError::MissingInput),
+    };
+
+    let tag = match arguments.get("tag") {
+        Some(Value::String(s)) if !s.trim().is_empty() => {
+            s.trim().to_string()
+        }
+        _ => return Err(ToolError::MissingInput),
+    };
+
+    let cik = format!("{cik:0>10}");
+
+    // --- URL -----------------------------------------------------------
+
+    let url = format!(
+        "{SEC_BASE_COMPANYCONCEPT}/CIK{cik}/{taxonomy}/{tag}.json"
+    );
+
+    // --- headers -------------------------------------------------------
+
+    let mut headers = HeaderMap::new();
+
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_str(&state.config.email)
+            .map_err(|e| ToolError::Http(e.to_string()))?,
+    );
+
+    // --- fetch ---------------------------------------------------------
+
+    let bytes = state.client
+        .get_bytes(&url, headers)
+        .await
+        .map_err(|e| ToolError::Http(e.to_string()))?;
+
+    // --- parse ---------------------------------------------------------
+
+    let data: Value = serde_json::from_slice(&bytes)
+        .map_err(|e| {
+            ToolError::Http(format!(
+                "failed to parse companyconcept: {e}"
+            ))
+        })?;
+
+    // --- build result --------------------------------------------------
+
+    let mut result = json!({
+        "cik": cik,
+        "taxonomy": taxonomy,
+        "tag": tag,
+        "entity_name": data.get("entityName"),
+        "label": data.get("label"),
+        "description": data.get("description"),
+        "units": data.get("units"),
+        "source_url": url,
+    });
+
+    // --- trim historical facts ----------------------------------------
+
+    const MAX_OUTPUT_CHARS: usize = 40_000;
+
+    if let Some(units) = result
+        .get_mut("units")
+        .and_then(Value::as_object_mut)
+    {
+        for facts in units.values_mut() {
+            trim_output(facts, MAX_OUTPUT_CHARS);
+        }
+    }
+
+    // --- output --------------------------------------------------------
+
+    serde_json::to_string(&result)
+        .map_err(|e| ToolError::Http(e.to_string()))
 }

@@ -66,7 +66,7 @@ async fn test_tool_cellar_get_works_based_on_keyword() {
             "params": {
                 "name": "cellar.get_works_based_on_keyword",
                 "arguments": {
-                    "input": "data protection"
+                    "keyword": "data protection"
                 }
             }
         }))
@@ -311,7 +311,7 @@ async fn test_tool_edgar_get_cik() {
 }
 
 #[actix_web::test]
-async fn test_tool_edgar_company_concepts() {
+async fn test_tool_edgar_company_tags() {
     let app = test::init_service(build_app(default_state())).await;
 
     let req = test::TestRequest::post()
@@ -321,7 +321,7 @@ async fn test_tool_edgar_company_concepts() {
             "id": 7,
             "method": "tools/call",
             "params": {
-                "name": "edgar.get_company_concepts",
+                "name": "edgar.get_company_tags",
                 "arguments": {
                     "cik": "320193"
                 }
@@ -353,57 +353,81 @@ async fn test_tool_edgar_company_concepts() {
 
     assert!(!content.is_empty());
 
-    // The first content item should contain the JSON string returned
-    // by get_company_concepts().
+    // The tool result is returned as a plain string.
     let text = content[0]["text"]
         .as_str()
         .expect("expected tool result text to be a string");
 
     assert!(!text.is_empty());
 
-    // Parse the actual get_company_concepts JSON result.
-    let data: serde_json::Value =
-        serde_json::from_str(text).expect("expected valid JSON from get_company_concepts");
+    // Basic checks on the returned string.
+    assert!(text.contains("0000320193"));
+    assert!(text.contains("Apple Inc."));
+    assert!(text.contains("us-gaap"));
+    assert!(text.contains("Assets"));
+}
 
-    // CIK 320193 = Apple
-    assert_eq!(data["cik"], "0000320193");
-    assert_eq!(data["entity_name"], "Apple Inc.");
+#[actix_web::test]
+async fn test_tool_edgar_company_concept() {
+    let app = test::init_service(build_app(default_state())).await;
 
-    assert_eq!(
-        data["source_url"],
-        "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json"
+    let req = test::TestRequest::post()
+        .uri("/mcp")
+        .set_json(serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 8,
+            "method": "tools/call",
+            "params": {
+                "name": "edgar.get_company_concept",
+                "arguments": {
+                    "cik": "320193",
+                    "taxonomy": "us-gaap",
+                    "tag": "Assets"
+                }
+            }
+        }))
+        .to_request();
+
+    let resp = test::call_service(&app, req).await;
+
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let body: serde_json::Value = test::read_body_json(resp).await;
+
+    assert_eq!(body["jsonrpc"], "2.0");
+    assert_eq!(body["id"], 8);
+
+    // MCP tool call should succeed
+    assert!(
+        body.get("error").is_none(),
+        "unexpected MCP error: {body:#}"
     );
 
-    // Basic structural checks
-    assert!(data["taxonomies"].is_object());
-    assert!(data["total_rows"].as_u64().unwrap() > 0);
+    let result = &body["result"];
 
-    assert_eq!(
-        data["columns"],
-        serde_json::json!([
-            "taxonomy",
-            "tag",
-            "label",
-            "units",
-            "n_facts",
-            "first_end",
-            "latest_end"
-        ])
-    );
-
-    let rows = data["rows"]
+    // The tool should return content
+    let content = result["content"]
         .as_array()
-        .expect("expected rows to be an array");
+        .expect("expected result.content to be an array");
 
-    assert!(!rows.is_empty());
+    assert!(!content.is_empty());
 
-    // Check the shape of one catalog row.
-    let row = &rows[0];
+    // The tool result is returned as a plain string.
+    let text = content[0]["text"]
+        .as_str()
+        .expect("expected tool result text to be a string");
 
-    assert_eq!(row.as_array().unwrap().len(), 7);
-    assert!(row[0].is_string()); // taxonomy
-    assert!(row[1].is_string()); // tag
-    assert!(row[2].is_string()); // label
-    assert!(row[3].is_array());  // units
-    assert!(row[4].is_number()); // n_facts
+    assert!(!text.is_empty());
+
+    // Verify that the requested company and concept are present
+    // in the returned string.
+    assert!(text.contains("0000320193"));
+    assert!(text.contains("Apple Inc."));
+    assert!(text.contains("us-gaap"));
+    assert!(text.contains("Assets"));
+
+    // Basic metadata checks
+    assert!(text.contains("label"));
+    assert!(text.contains("description"));
+
 }

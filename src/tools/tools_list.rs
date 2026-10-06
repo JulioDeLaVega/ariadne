@@ -19,12 +19,12 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             input_schema: json!({
                 "type": "object",
                 "properties": {
-                    "text": {
+                    "keyword": {
                         "type": "string",
                         "description": "A keyword or phrase to search for within EU regulation titles (e.g. 'data protection'). Matched case-insensitively as a substring."
                     }
                 },
-                "required": ["text"]
+                "required": ["keyword"]
             }),
         },
         ToolDefinition {
@@ -198,7 +198,7 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             }),
         },
         ToolDefinition {
-            name: "edgar.get_company_concepts".into(),
+            name: "edgar.get_company_tags".into(),
             description: "Fetch SEC EDGAR Company Facts data for a company identified by its CIK. Returns a catalog of the company's reported financial concepts across SEC taxonomies, including concept tags, labels, units, number of facts, and the earliest and latest reporting periods available for each concept. Use this if you want to discover which data you can fetch for a given company CIK".into(),
             input_schema: json!({
                 "type": "object",
@@ -209,6 +209,28 @@ pub fn tools_list() -> Vec<ToolDefinition> {
                     }
                 },
                 "required": ["cik"]
+            }),
+        },
+        ToolDefinition {
+            name: "edgar.get_company_concept".into(),
+            description: "Fetch a specific SEC EDGAR XBRL company concept for a company identified by its CIK, taxonomy, and concept tag. Returns the company's reported facts for that concept, including the entity name, concept label and description, units, historical values, reporting periods, and source URL. Use this after discovering an available taxonomy and tag with edgar.get_company_tags when you need the detailed historical facts for a specific concept.".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "cik": {
+                        "type": ["string", "number"],
+                        "description": "The company's SEC Central Index Key (CIK). Accepts a numeric CIK or a string, optionally prefixed with 'CIK'. The CIK must contain up to 10 digits; it is automatically zero-padded to 10 digits (e.g. '320193', '0000320193', or 'CIK0000320193' for Apple Inc.)."
+                    },
+                    "taxonomy": {
+                        "type": "string",
+                        "description": "The SEC XBRL taxonomy containing the concept, such as 'us-gaap' or 'dei'."
+                    },
+                    "tag": {
+                        "type": "string",
+                        "description": "The XBRL concept tag to retrieve, such as 'Assets', 'RevenueFromContractWithCustomerExcludingAssessedTax', or 'EntityCommonStockSharesOutstanding'."
+                    }
+                },
+                "required": ["cik", "taxonomy", "tag"]
             }),
         }
     ]
