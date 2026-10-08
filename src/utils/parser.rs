@@ -3,17 +3,17 @@ use crate::utils::ToolError;
 
 pub fn parse_xhtml(bytes: &[u8]) -> Result<String, ToolError> {
     let html = std::str::from_utf8(bytes)
-        .map_err(|_| ToolError::InvalidInput)?;
+        .map_err(|_| ToolError::InvalidInput("Invalid input".into()))?;
 
     let document = Html::parse_document(html);
 
     let selector = Selector::parse("body")
-        .map_err(|_| ToolError::InvalidInput)?;
+        .map_err(|_| ToolError::InvalidInput("Invalid input".into()))?;
 
     let body = document
         .select(&selector)
         .next()
-        .ok_or(ToolError::InvalidInput)?;
+        .ok_or(ToolError::InvalidInput("Invalid input".into()))?;
     
     let text = body
         .text()
@@ -49,7 +49,7 @@ pub fn parse_fmx4(bytes: &[u8]) -> Result<String, ToolError> {
 
             Ok(_) => {}
 
-            Err(_) => return Err(ToolError::InvalidInput),
+            Err(_) => return Err(ToolError::InvalidInput("Invalid input".into())),
         }
 
         buffer.clear();
@@ -65,7 +65,7 @@ use lopdf::Document;
 
 pub fn parse_pdf(bytes: &[u8]) -> Result<String, ToolError> {
     let document = Document::load_mem(bytes)
-        .map_err(|_| ToolError::InvalidInput)?;
+        .map_err(|_| ToolError::InvalidInput("Invalid input".into()))?;
 
     let pages = document.get_pages();
 
@@ -73,7 +73,7 @@ pub fn parse_pdf(bytes: &[u8]) -> Result<String, ToolError> {
 
     let text = document
         .extract_text(&page_numbers)
-        .map_err(|_| ToolError::InvalidInput)?;
+        .map_err(|_| ToolError::InvalidInput("Invalid input".into()))?;
 
     Ok(text)
 }

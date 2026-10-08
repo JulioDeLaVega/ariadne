@@ -10,7 +10,7 @@ pub fn search_text(
     let re = RegexBuilder::new(pattern)
         .dot_matches_new_line(true)
         .build()
-        .map_err(|_| ToolError::InvalidInput)?;
+        .map_err(|_| ToolError::InvalidInput("Invalid input".into()))?;
 
     let mut matches: Vec<String> = Vec::new();
     let mut remaining = max_total_len;

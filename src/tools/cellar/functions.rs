@@ -157,7 +157,7 @@ pub async fn get_manifestation_content_with_regex(state: &AppState, arguments: &
         Some("application/xml;type=fmx4") | Some("application/fmx4") => parse_fmx4(&bytes)?,
         Some("xhtml") | Some("application/xhtml+xml") => parse_xhtml(&bytes)?,
         Some("pdf") | Some("application/pdf") | Some("pdfa1a") | Some("application/pdf;type=pdfa1a") => parse_pdf(&bytes)?,
-        _ => return Err(ToolError::InvalidInput),
+        _ => return Err(ToolError::InvalidInput("Invalid input".into())),
     };
 
     let retrieved_text = search_text(&text, &regex_pattern, max_matches as usize, 10000)?;

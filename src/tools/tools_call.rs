@@ -15,9 +15,10 @@ pub async fn tools_call(state: &AppState, name: &str, arguments: &serde_json::Va
         "cellar.get_manifestations_based_on_expression" => cellar::functions::get_manifestations_based_on_expression(state, arguments).await,
         "ted.search_notices" => ted::functions::search_notices(state, arguments).await,
         "ted.search_awards" => ted::functions::search_awards(state, arguments).await,
-        "edgar.get_cik" => edgar::functions::get_cik(state, arguments).await,
-        "edgar.get_company_tags" => edgar::functions::get_company_tags(state, arguments).await,
-        "edgar.get_company_concept" => edgar::functions::get_company_concept(state, arguments).await,
+        "edgar.helper.get_cik" => edgar::functions::helper_get_cik(state, arguments).await,
+        "edgar.helper.get_structure" => edgar::functions::helper_get_structure(state, arguments).await,
+        "edgar.xbrl.get_company_concept" => edgar::functions::xbrl_get_company_concept(state, arguments).await,
+        "edgar.xbrl.get_frame" => edgar::functions::xbrl_get_frame(state, arguments).await,
         other => Err(ToolError::UnknownTool(other.to_string())),
     }
 }

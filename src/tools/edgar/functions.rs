@@ -13,7 +13,7 @@ const SEC_BASE_COMPANYCONCEPT: &str = "https://data.sec.gov/api/xbrl/companyconc
 
 static TICKER_CACHE: OnceLock<HashMap<String, String>> = OnceLock::new();
 
-pub async fn get_cik(
+pub async fn helper_get_cik(
     state: &AppState,
     arguments: &Value,
 ) -> Result<String, ToolError> {
@@ -32,7 +32,7 @@ pub async fn get_cik(
         return cache
             .get(&ticker.to_uppercase())
             .cloned()
-            .ok_or(ToolError::InvalidInput);
+            .ok_or(ToolError::InvalidInput("Invalid input".into()));
     }
 
     let mut headers = HeaderMap::new();
@@ -78,7 +78,7 @@ pub async fn get_cik(
         .and_then(|cache| {
             cache.get(&ticker.to_uppercase()).cloned()
         })
-        .ok_or(ToolError::InvalidInput)
+        .ok_or(ToolError::InvalidInput("Invalid input".into()))
 }
 
 use std::collections::BTreeMap;
@@ -102,7 +102,7 @@ struct Fact {
     end: String, // ISO date, so string comparison orders correctly
 }
 
-pub async fn get_company_tags(
+pub async fn helper_get_structure(
     state: &AppState,
     arguments: &Value,
 ) -> Result<String, ToolError> {
@@ -117,7 +117,7 @@ pub async fn get_company_tags(
         return Err(ToolError::MissingInput);
     }
     if !cik.chars().all(|c| c.is_ascii_digit()) || cik.len() > 10 {
-        return Err(ToolError::InvalidInput);
+        return Err(ToolError::InvalidInput("Invalid input".into()));
     }
 
     let cik = format!("{cik:0>10}");
@@ -213,10 +213,7 @@ fn serialized_len(value: &Value) -> usize {
         .unwrap_or(usize::MAX)
 }
 
-pub async fn get_company_concept(
-    state: &AppState,
-    arguments: &Value,
-) -> Result<String, ToolError> {
+pub async fn xbrl_get_company_concept(state: &AppState, arguments: &Value) -> Result<String, ToolError> {
     // --- input ---------------------------------------------------------
 
     let cik = match arguments.get("cik") {
@@ -232,7 +229,7 @@ pub async fn get_company_concept(
     }
 
     if !cik.chars().all(|c| c.is_ascii_digit()) || cik.len() > 10 {
-        return Err(ToolError::InvalidInput);
+        return Err(ToolError::InvalidInput("Invalid input".into()));
     }
 
     let taxonomy = match arguments.get("taxonomy") {
@@ -313,4 +310,206 @@ pub async fn get_company_concept(
 
     serde_json::to_string(&result)
         .map_err(|e| ToolError::Http(e.to_string()))
+}
+
+const SEC_BASE_FRAMES: &str = "https://data.sec.gov/api/xbrl/frames";
+
+pub async fn xbrl_get_frame(
+    state: &AppState,
+    arguments: &Value,
+) -> Result<String, ToolError> {
+    // --- required input -----------------------------------------------
+
+    let taxonomy = match arguments.get("taxonomy") {
+        Some(Value::String(s)) if !s.trim().is_empty() => s.trim().to_string(),
+        _ => return Err(ToolError::MissingInput),
+    };
+
+    let tag = match arguments.get("tag") {
+        Some(Value::String(s)) if !s.trim().is_empty() => s.trim().to_string(),
+        _ => return Err(ToolError::MissingInput),
+    };
+
+    let unit = match arguments.get("unit") {
+        Some(Value::String(s)) if !s.trim().is_empty() => s.trim().to_string(),
+        _ => return Err(ToolError::MissingInput),
+    };
+
+    let frame = match arguments.get("frame") {
+        Some(Value::String(s)) if !s.trim().is_empty() => s.trim().to_string(),
+        _ => return Err(ToolError::MissingInput),
+    };
+
+    // --- URL -----------------------------------------------------------
+
+    let url = format!(
+        "{SEC_BASE_FRAMES}/{taxonomy}/{tag}/{unit}/{frame}.json"
+    );
+
+    // --- headers -------------------------------------------------------
+
+    let mut headers = HeaderMap::new();
+
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_str(&state.config.email)
+            .map_err(|e| ToolError::Http(e.to_string()))?,
+    );
+
+    // --- fetch ---------------------------------------------------------
+
+    let bytes = state
+        .client
+        .get_bytes(&url, headers)
+        .await
+        .map_err(|e| ToolError::Http(e.to_string()))?;
+
+    // --- parse ---------------------------------------------------------
+
+    let mut data: Value = serde_json::from_slice(&bytes).map_err(|e| {
+        ToolError::Http(format!("Failed to parse XBRL frame: {e}"))
+    })?;
+
+    // --- apply filters -------------------------------------------------
+
+    filter_frame_data(&mut data, arguments)?;
+
+    // --- output --------------------------------------------------------
+
+    let mut result = json!({
+        "taxonomy": taxonomy,
+        "tag": tag,
+        "unit": unit,
+        "frame": frame,
+        "label": data.get("label"),
+        "description": data.get("description"),
+        "entity_name": data.get("entityName"),
+        "data": data.get("data"),
+        "source_url": url,
+    });
+
+    // --- trim large result ---------------------------------------------
+
+    const MAX_OUTPUT_CHARS: usize = 40_000;
+
+    if let Some(data) = result.get_mut("data") {
+        trim_output(data, MAX_OUTPUT_CHARS);
+    }
+
+    // --- serialize -----------------------------------------------------
+
+    serde_json::to_string(&result)
+        .map_err(|e| ToolError::Http(e.to_string()))
+}
+
+pub fn filter_frame_data(
+    data: &mut Value,
+    arguments: &Value,
+) -> Result<(), ToolError> {
+    let cik = arguments.get("cik").and_then(Value::as_u64);
+
+    let accn = arguments
+        .get("accn")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+
+    let entity_name = arguments
+        .get("entity_name")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_lowercase);
+
+    let loc = arguments
+        .get("loc")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+
+    let val_filter = arguments
+        .get("val")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    let val_filter = if let Some(filter) = val_filter {
+        let (operator, value_str) =
+            if let Some(value) = filter.strip_suffix('+') {
+                ('+', value.trim())
+            } else if let Some(value) = filter.strip_suffix('-') {
+                ('-', value.trim())
+            } else {
+                return Err(ToolError::InvalidInput("Invalid val filter. Use '<number>+' or '<number>-'.".into()));
+            };
+
+        let threshold: f64 = value_str.parse().map_err(|_| {
+            ToolError::InvalidInput("Invalid val threshold. Expected a number followed by '+' or '-'.".into())
+        })?;
+
+        if !threshold.is_finite() {
+            return Err(ToolError::InvalidInput("The val threshold must be a finite number.".into()));
+        }
+
+        Some((operator, threshold))
+    } else {
+        None
+    };
+
+    if let Some(records) = data.get_mut("data").and_then(Value::as_array_mut) {
+        records.retain(|record| {
+            if let Some(filter) = cik {
+                if record.get("cik").and_then(Value::as_u64) != Some(filter) {
+                    return false;
+                }
+            }
+
+            if let Some(ref filter) = accn {
+                if record.get("accn").and_then(Value::as_str)
+                    != Some(filter.as_str())
+                {
+                    return false;
+                }
+            }
+
+            if let Some(ref filter) = entity_name {
+                let matches = record
+                    .get("entityName")
+                    .and_then(Value::as_str)
+                    .map(|name| name.to_lowercase().contains(filter))
+                    .unwrap_or(false);
+
+                if !matches {
+                    return false;
+                }
+            }
+
+            if let Some(ref filter) = loc {
+                if record.get("loc").and_then(Value::as_str)
+                    != Some(filter.as_str())
+                {
+                    return false;
+                }
+            }
+
+            if let Some((operator, threshold)) = val_filter {
+                let record_value = match record.get("val").and_then(Value::as_f64) {
+                    Some(value) => value,
+                    None => return false,
+                };
+
+                match operator {
+                    '+' if record_value < threshold => return false,
+                    '-' if record_value > threshold => return false,
+                    _ => {}
+                }
+            }
+
+            true
+        });
+    }
+
+    Ok(())
 }

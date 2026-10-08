@@ -288,28 +288,28 @@ async fn test_tool_ted_award() {
 /// `edgar.get_cik` resolves the ticker `AAPL` to Apple's zero-padded CIK.
 #[actix_web::test]
 async fn test_tool_edgar_get_cik() {
-    let body = call_tool(8, "edgar.get_cik", json!({ "ticker": "AAPL" })).await;
+    let body = call_tool(8, "edgar.helper.get_cik", json!({ "ticker": "AAPL" })).await;
 
     assert_eq!(expect_tool_text(&body, "EDGAR CIK lookup"), APPLE_CIK_PADDED);
 }
 
-/// `edgar.get_company_tags` lists Apple's reported XBRL concepts, including
+/// `edgar.get_structure_from_company_facts` lists Apple's reported XBRL concepts, including
 /// the `us-gaap` taxonomy and the `Assets` tag.
 #[actix_web::test]
 async fn test_tool_edgar_company_tags() {
-    let body = call_tool(7, "edgar.get_company_tags", json!({ "cik": APPLE_CIK })).await;
+    let body = call_tool(7, "edgar.helper.get_structure", json!({ "cik": APPLE_CIK })).await;
 
     let text = expect_tool_text(&body, "EDGAR company tags");
     assert_contains_all(text, &[APPLE_CIK_PADDED, "Apple Inc.", "us-gaap", "Assets"]);
 }
 
-/// `edgar.get_company_concept` returns Apple's `us-gaap:Assets` facts,
+/// `edgar.get_xbrl_company_concept` returns Apple's `us-gaap:Assets` facts,
 /// including the concept's `label` and `description` metadata.
 #[actix_web::test]
 async fn test_tool_edgar_company_concept() {
     let body = call_tool(
         8,
-        "edgar.get_company_concept",
+        "edgar.xbrl.get_company_concept",
         json!({ "cik": APPLE_CIK, "taxonomy": "us-gaap", "tag": "Assets" }),
     )
     .await;
@@ -318,6 +318,35 @@ async fn test_tool_edgar_company_concept() {
     assert_contains_all(
         text,
         &[APPLE_CIK_PADDED, "Apple Inc.", "us-gaap", "Assets", "label", "description"],
+    );
+}
+
+#[actix_web::test]
+async fn test_tool_edgar_xbrl_frame() {
+    let body = call_tool(
+        9,
+        "edgar.xbrl.get_frame",
+        json!({
+            "taxonomy": "us-gaap",
+            "tag": "Revenues",
+            "unit": "USD",
+            "frame": "CY2025Q4"
+        }),
+    )
+    .await;
+
+    let text = expect_tool_text(&body, "EDGAR XBRL frame");
+
+    assert_contains_all(
+        text,
+        &[
+            "us-gaap",
+            "Revenues",
+            "USD",
+            "CY2025Q4",
+            "label",
+            "data",
+        ],
     );
 }
 

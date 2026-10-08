@@ -184,7 +184,7 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             }),
         },
         ToolDefinition {
-            name: "edgar.get_cik".into(),
+            name: "edgar.helper.get_cik".into(),
             description: "Resolve a US company ticker symbol to its SEC Central Index Key (CIK) using the SEC EDGAR company ticker database. The ticker lookup is cached in memory after the first request. Returns the CIK as a zero-padded 10-digit string.".into(),
             input_schema: json!({
                 "type": "object",
@@ -198,7 +198,7 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             }),
         },
         ToolDefinition {
-            name: "edgar.get_company_tags".into(),
+            name: "edgar.helper.get_structure".into(),
             description: "Fetch SEC EDGAR Company Facts data for a company identified by its CIK. Returns a catalog of the company's reported financial concepts across SEC taxonomies, including concept tags, labels, units, number of facts, and the earliest and latest reporting periods available for each concept. Use this if you want to discover which data you can fetch for a given company CIK".into(),
             input_schema: json!({
                 "type": "object",
@@ -212,7 +212,7 @@ pub fn tools_list() -> Vec<ToolDefinition> {
             }),
         },
         ToolDefinition {
-            name: "edgar.get_company_concept".into(),
+            name: "edgar.xbrl.get_company_concept".into(),
             description: "Fetch a specific SEC EDGAR XBRL company concept for a company identified by its CIK, taxonomy, and concept tag. Returns the company's reported facts for that concept, including the entity name, concept label and description, units, historical values, reporting periods, and source URL. Use this after discovering an available taxonomy and tag with edgar.get_company_tags when you need the detailed historical facts for a specific concept.".into(),
             input_schema: json!({
                 "type": "object",
@@ -232,6 +232,52 @@ pub fn tools_list() -> Vec<ToolDefinition> {
                 },
                 "required": ["cik", "taxonomy", "tag"]
             }),
-        }
+        },
+        ToolDefinition {
+            name: "edgar.xbrl.get_frame".into(),
+            description: "Fetch an SEC EDGAR XBRL frame containing a standardized financial concept across reporting companies for a specific reporting period. Returns comparable facts from multiple companies, including the taxonomy, concept label and description, unit, reporting frame, entity identifiers, reported values, reporting periods, and source URL. Use this to compare a specific XBRL concept across companies for a common reporting period. Optional filters can narrow results by CIK, accession number, entity name, location, or a numeric value threshold. Multiple filters are combined with AND. Use the company facts tool instead when retrieving the historical facts of one specific company.".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "taxonomy": {
+                        "type": "string",
+                        "description": "The SEC XBRL taxonomy containing the concept, such as 'us-gaap' or 'dei'."
+                    },
+                    "tag": {
+                        "type": "string",
+                        "description": "The XBRL concept tag to retrieve, such as 'Revenues', 'Assets', or 'NetIncomeLoss'."
+                    },
+                    "unit": {
+                        "type": "string",
+                        "description": "The XBRL unit used for the concept, such as 'USD', 'shares', or 'USD/shares'."
+                    },
+                    "frame": {
+                        "type": "string",
+                        "description": "The SEC XBRL reporting frame identifying the reporting period, such as 'CY2025Q4' for calendar-year Q4 2025 or 'CY2025' for calendar-year 2025."
+                    },
+                    "cik": {
+                        "type": "integer",
+                        "description": "Optional SEC Central Index Key (CIK). Returns only records for the specified registrant."
+                    },
+                    "accn": {
+                        "type": "string",
+                        "description": "Optional SEC accession number. Returns only records with an exact accession number match, such as '0000913760-26-000017'."
+                    },
+                    "entity_name": {
+                        "type": "string",
+                        "description": "Optional entity name filter. Matches a case-insensitive substring of the entity name, such as 'NVIDIA' or 'StoneX'."
+                    },
+                    "loc": {
+                        "type": "string",
+                        "description": "Optional location filter. Matches the location field exactly, such as 'US-NY'."
+                    },
+                    "val": {
+                        "type": "string",
+                        "description": "Optional numeric value threshold. Append '+' to return records whose values are greater than or equal to the threshold, or '-' to return records whose values are less than or equal to the threshold. Examples: '1000000000+' for values of at least one billion, or '1000000-' for values of at most one million. Exact-match filtering is not supported."
+                    }
+                },
+                "required": ["taxonomy", "tag", "unit", "frame"]
+            }),
+        },
     ]
 }

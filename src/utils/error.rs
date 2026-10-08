@@ -4,7 +4,7 @@ use std::fmt;
 #[derive(Debug)]
 pub enum ToolError {
     MissingInput,
-    InvalidInput,
+    InvalidInput(String),
     Http(String),
     UnknownTool(String),
 }
@@ -13,9 +13,9 @@ impl fmt::Display for ToolError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ToolError::MissingInput => write!(f, "missing input"),
-            ToolError::InvalidInput => write!(f, "invalid input"),
-            ToolError::Http(e) => write!(f, "{e}"),
-            ToolError::UnknownTool(t) => write!(f, "unknown tool: {t}"),
+            ToolError::InvalidInput(e) => write!(f, "invalid input: {e}"),
+            ToolError::Http(e) => write!(f, "HTTP error: {e}"),
+            ToolError::UnknownTool(e) => write!(f, "unknown tool: {e}"),
         }
     }
 }
@@ -30,7 +30,7 @@ impl ResponseError for ToolError {
     fn error_response(&self) -> HttpResponse {
         match self {
             ToolError::MissingInput => HttpResponse::BadRequest().body(self.to_string()),
-            ToolError::InvalidInput => HttpResponse::BadRequest().body(self.to_string()),
+            ToolError::InvalidInput(_) => HttpResponse::BadRequest().body(self.to_string()),
             ToolError::UnknownTool(_) => HttpResponse::NotFound().body(self.to_string()),
             ToolError::Http(_) => HttpResponse::BadGateway().body(self.to_string()),
         }
