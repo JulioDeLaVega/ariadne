@@ -19,6 +19,7 @@ pub async fn tools_call(state: &AppState, name: &str, arguments: &serde_json::Va
         "edgar.helper.get_structure" => edgar::functions::helper_get_structure(state, arguments).await,
         "edgar.xbrl.get_company_concept" => edgar::functions::xbrl_get_company_concept(state, arguments).await,
         "edgar.xbrl.get_frame" => edgar::functions::xbrl_get_frame(state, arguments).await,
+        "edgar.get_submissions" => edgar::functions::get_submissions(state, arguments).await,
         other => Err(ToolError::UnknownTool(other.to_string())),
     }
 }

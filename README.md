@@ -56,15 +56,20 @@ Targeted information
 Ariadne exposes the CELLAR RDF graph and document repository through a set of MCP tools.
 
 ```text
-cellar.get_works_based_on_keyword
-cellar.uri_from_celex
-cellar.get_predicates
-cellar.get_objects_based_on_uri
-cellar.get_resource_adopts_resource
-cellar.get_resource_legal_information_miscellaneous
-cellar.get_expressions_based_on_work
-cellar.get_manifestations_based_on_expression
-cellar.get_manifestation_content_with_regex
+CELLAR
+│
+├── 1. SPARQL — https://publications.europa.eu/webapi/rdf/sparql
+│   ├── ✅ get_works_based_on_keyword — Search legal acts by keyword in English titles
+│   ├── ✅ uri_from_celex — Resolve CELEX identifiers to CELLAR work URIs
+│   ├── ✅ get_predicates — Retrieve predicates and objects for a resource URI
+│   ├── ✅ get_objects_based_on_uri — Find legal acts based on a specified resource
+│   ├── ✅ get_resource_adopts_resource — Retrieve adopted resources
+│   ├── ✅ get_resource_legal_information_miscellaneous — Search miscellaneous legal information
+│   ├── ✅ get_expressions_based_on_work — Retrieve language-specific expressions of a work
+│   └── ✅ get_manifestations_based_on_expression — Retrieve manifestations and associated item URIs
+│
+└── 2. Manifestation Content — URL supplied as input
+└── ✅ get_manifestation_content_with_regex — Fetch FMX4, XHTML or PDF/PDF-A content and extract regex matches
 ```
 
 The integration covers:
@@ -147,25 +152,56 @@ The current implementation intentionally focuses on company identification and X
 ```text
 EDGAR
 │
-├── Company identification
-│   └── Company Tickers          ✅
+├── 1. Company Identification
+│   ├── Base: https://www.sec.gov/files
+│   └── ✅ /company_tickers.json
+│       └── Helper: search company names/tickers and retrieve CIK
 │
-├── XBRL
-│   ├── Company Facts             ✅
-│   ├── Company Concept           ✅
-│   └── Frames                    ✅
+├── 2. XBRL Financial Data API
+│   └── Base: https://data.sec.gov/api/xbrl
+│       ├── Company Facts
+│       │   └── ✅ /companyfacts/CIKXXXXXXXXXX.json
+│       │       └── All supported standard-taxonomy facts for a company
+│       ├── Company Concept
+│       │   └── ✅ /companyconcept/CIKXXXXXXXXXX/{taxonomy}/{tag}.json
+│       │       └── Historical facts for one concept and company
+│       └── Frames
+│           └── ✅ /frames/{taxonomy}/{tag}/{unit}/{period}.json
+│               └── Comparable facts across companies for a reporting period
 │
-├── Company filings
-│   ├── Submissions               ❌
-│   ├── Filing search             ❌
-│   ├── Filing archives           ❌
-│   └── Filing indexes            ❌
+├── 3. Submissions API
+│   └── Base: https://data.sec.gov/submissions
+│       ├── ✅ /CIKXXXXXXXXXX.json
+│       │   └── Company filing history, accepts form and dates filters for better results
+│       └── ❌ /CIKXXXXXXXXXX-submissions-001.json
+│           └── Additional historical filing records referenced by the main JSON
 │
-└── Ownership
-    ├── Forms 3/4/5               ❌
-    ├── 13F                       ❌
-    ├── 13D/13G                   ❌
-    └── Form 144                  ❌
+├── 4. Filing Search and Indexes
+│   ├── Base: https://www.sec.gov/Archives/edgar
+│   ├── ❌ /daily-index/index.json
+│   │   └── Daily index directory discovery
+│   ├── ❌ /daily-index/{year}/QTR{quarter}/index.json
+│   │   └── Quarterly index directory discovery
+│   ├── ❌ /daily-index/{year}/QTR{quarter}/master.idx
+│   │   └── Bulk index of filings, including CIK, company name, form, filing date and filename
+│   └── ❌ /daily-index/{year}/QTR{quarter}/company.idx
+│       └── Company-oriented filing index
+│
+├── 5. Filing Documents and Archives
+│   └── Base: https://www.sec.gov/Archives/edgar/data
+│       ├── ❌ /{CIK}/{ACCESSION_WITHOUT_DASHES}/{PRIMARY_DOCUMENT}
+│       │   └── Actual filing document (HTML, XML, text, etc.)
+│       ├── ❌ /{CIK}/{ACCESSION_WITHOUT_DASHES}/index.json
+│       │   └── Directory listing of files belonging to a filing
+│       └── ❌ /{CIK}/{ACCESSION_WITHOUT_DASHES}/FilingSummary.xml
+│           └── Available for certain XBRL filings; provides a summary of filing reports
+│
+├── 6. Bulk Data Downloads
+│   ├── Base: https://www.sec.gov/Archives/edgar/daily-index
+│   ├── ❌ /xbrl/companyfacts.zip
+│   │   └── Bulk company facts and frame data
+│   └── ❌ /bulkdata/submissions.zip
+│       └── Bulk filing history for all filers
 ```
 
 ### Implemented tools
@@ -353,9 +389,3 @@ Current integrations cover:
 - **US company identification and XBRL data** through SEC EDGAR
 
 The project is intended to expand to additional **public APIs, databases and structured information sources** over time.
-
----
-
-# License
-
-Add the applicable license here.

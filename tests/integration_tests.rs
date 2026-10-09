@@ -409,3 +409,161 @@ async fn test_rate_limit_is_per_ip() {
     let resp = test::call_service(&app, initialize_req("203.0.113.2").to_request()).await;
     assert_eq!(resp.status(), StatusCode::OK);
 }
+
+// Uses the same helpers as the frame test: call_tool, expect_tool_text,
+// assert_contains_all. Adjust the ids (10..=13) so they don't collide with
+// ids already used in your test file.
+//
+// These hit the live SEC API, so assertions are on stable historical facts
+// (NVIDIA, CIK 1045810) rather than on "latest" data.
+
+fn parse_tool_json(text: &str) -> Value {
+    serde_json::from_str(text).expect("tool output should be valid JSON")
+}
+
+fn filings_of(v: &Value) -> &Vec<Value> {
+    v.get("filings")
+        .and_then(|f| f.as_array())
+        .expect("response should contain a 'filings' array")
+}
+
+#[actix_web::test]
+async fn test_tool_edgar_submissions_basic() {
+    let body = call_tool(
+        10,
+        "edgar.get_submissions",
+        json!({
+            "cik": "CIK0001045810",
+            "limit": 5
+        }),
+    )
+    .await;
+
+    let text = expect_tool_text(&body, "EDGAR submissions");
+
+    assert_contains_all(
+        text,
+        &[
+            "0001045810",
+            "NVIDIA CORP",
+            "NVDA",
+            "filings",
+            "total_matches",
+            "source_url",
+        ],
+    );
+
+    let v = parse_tool_json(text);
+    assert_eq!(v["cik"], "0001045810");
+    assert_eq!(filings_of(&v).len(), 5);
+}
+
+#[actix_web::test]
+async fn test_tool_edgar_submissions_form_and_date_filters() {
+    let body = call_tool(
+        11,
+        "edgar.get_submissions",
+        json!({
+            "cik": 1045810,
+            "form": "10-Q",
+            "filing_date_from": "2025-01-01",
+            "filing_date_to": "2025-12-31"
+        }),
+    )
+    .await;
+
+    let text = expect_tool_text(&body, "EDGAR submissions 10-Q filter");
+    let v = parse_tool_json(text);
+    let filings = filings_of(&v);
+
+    // NVIDIA files three 10-Qs per fiscal year; all three fall in calendar 2025.
+    assert_eq!(filings.len(), 3, "expected exactly three 10-Qs in 2025");
+    assert_eq!(v["total_matches"], 3);
+
+    for f in filings {
+        assert_eq!(f["form"], "10-Q");
+        let d = f["filing_date"].as_str().unwrap();
+        assert!(
+            d >= "2025-01-01" && d <= "2025-12-31",
+            "filing_date {d} outside requested window"
+        );
+        assert!(f["url"]
+            .as_str()
+            .unwrap()
+            .starts_with("https://www.sec.gov/Archives/edgar/data/1045810/"));
+    }
+
+    // Newest first.
+    let dates: Vec<&str> = filings
+        .iter()
+        .map(|f| f["filing_date"].as_str().unwrap())
+        .collect();
+    let mut sorted = dates.clone();
+    sorted.sort_by(|a, b| b.cmp(a));
+    assert_eq!(dates, sorted, "filings should be sorted newest first");
+
+    assert!(dates.contains(&"2025-05-28"));
+    assert!(dates.contains(&"2025-08-27"));
+    assert!(dates.contains(&"2025-11-19"));
+}
+
+#[actix_web::test]
+async fn test_tool_edgar_submissions_multiple_forms() {
+    let body = call_tool(
+        12,
+        "edgar.get_submissions",
+        json!({
+            "cik": "1045810",
+            "form": ["10-K", "10-Q"],
+            "filing_date_from": "2025-01-01",
+            "filing_date_to": "2025-12-31"
+        }),
+    )
+    .await;
+
+    let text = expect_tool_text(&body, "EDGAR submissions multi-form filter");
+    let v = parse_tool_json(text);
+    let filings = filings_of(&v);
+
+    assert!(!filings.is_empty());
+    for f in filings {
+        let form = f["form"].as_str().unwrap();
+        assert!(
+            form == "10-K" || form == "10-Q",
+            "unexpected form {form} in results"
+        );
+    }
+    assert!(filings.iter().any(|f| f["form"] == "10-K"));
+    assert!(filings.iter().any(|f| f["form"] == "10-Q"));
+}
+
+#[actix_web::test]
+async fn test_tool_edgar_submissions_older_filings() {
+    // 2019 is outside the "recent" window, so the additional
+    // CIK0001045810-submissions-*.json file must be fetched.
+    let body = call_tool(
+        13,
+        "edgar.get_submissions",
+        json!({
+            "cik": "1045810",
+            "form": "10-K",
+            "filing_date_from": "2019-01-01",
+            "filing_date_to": "2019-12-31"
+        }),
+    )
+    .await;
+
+    let text = expect_tool_text(&body, "EDGAR submissions older filings");
+
+    assert_contains_all(text, &["additional_files_fetched", "submissions-001.json"]);
+
+    let v = parse_tool_json(text);
+    let filings = filings_of(&v);
+
+    assert!(!filings.is_empty(), "expected a 10-K filed in 2019");
+    for f in filings {
+        assert_eq!(f["form"], "10-K");
+        assert!(f["filing_date"].as_str().unwrap().starts_with("2019-"));
+    }
+    assert!(!v["additional_files_fetched"].as_array().unwrap().is_empty());
+}

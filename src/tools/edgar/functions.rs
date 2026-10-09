@@ -6,9 +6,12 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-const SEC_BASE_CIK: &str = "https://www.sec.gov";
-const SEC_BASE_COMPANYFACTS: &str = "https://data.sec.gov/api/xbrl/companyfacts";
-const SEC_BASE_COMPANYCONCEPT: &str = "https://data.sec.gov/api/xbrl/companyconcept";
+const SEC_WWW_CIK: &str = "https://www.sec.gov";
+const SEC_DATA_COMPANYFACTS: &str = "https://data.sec.gov/api/xbrl/companyfacts";
+const SEC_DATA_COMPANYCONCEPT: &str = "https://data.sec.gov/api/xbrl/companyconcept";
+
+const SEC_BASE_SUBMISSIONS: &str = "https://data.sec.gov/submissions";
+const SEC_BASE_ARCHIVES: &str = "https://www.sec.gov/Archives/edgar/data";
 
 
 static TICKER_CACHE: OnceLock<HashMap<String, String>> = OnceLock::new();
@@ -42,7 +45,7 @@ pub async fn helper_get_cik(
         HeaderValue::from_str(&state.config.email).map_err(|e| ToolError::Http(e.to_string()))?,
     );
 
-    let url = format!("{SEC_BASE_CIK}/files/company_tickers.json");
+    let url = format!("{SEC_WWW_CIK}/files/company_tickers.json");
 
     let bytes = state.client
         .get_bytes(&url, headers)
@@ -121,7 +124,7 @@ pub async fn helper_get_structure(
     }
 
     let cik = format!("{cik:0>10}");
-    let url = format!("{SEC_BASE_COMPANYFACTS}/CIK{cik}.json");
+    let url = format!("{SEC_DATA_COMPANYFACTS}/CIK{cik}.json");
 
     // --- headers -------------------------------------------------------
 
@@ -251,7 +254,7 @@ pub async fn xbrl_get_company_concept(state: &AppState, arguments: &Value) -> Re
     // --- URL -----------------------------------------------------------
 
     let url = format!(
-        "{SEC_BASE_COMPANYCONCEPT}/CIK{cik}/{taxonomy}/{tag}.json"
+        "{SEC_DATA_COMPANYCONCEPT}/CIK{cik}/{taxonomy}/{tag}.json"
     );
 
     // --- headers -------------------------------------------------------
@@ -312,7 +315,7 @@ pub async fn xbrl_get_company_concept(state: &AppState, arguments: &Value) -> Re
         .map_err(|e| ToolError::Http(e.to_string()))
 }
 
-const SEC_BASE_FRAMES: &str = "https://data.sec.gov/api/xbrl/frames";
+const SEC_DATA_FRAMES: &str = "https://data.sec.gov/api/xbrl/frames";
 
 pub async fn xbrl_get_frame(
     state: &AppState,
@@ -343,7 +346,7 @@ pub async fn xbrl_get_frame(
     // --- URL -----------------------------------------------------------
 
     let url = format!(
-        "{SEC_BASE_FRAMES}/{taxonomy}/{tag}/{unit}/{frame}.json"
+        "{SEC_DATA_FRAMES}/{taxonomy}/{tag}/{unit}/{frame}.json"
     );
 
     // --- headers -------------------------------------------------------
@@ -512,4 +515,310 @@ pub fn filter_frame_data(
     }
 
     Ok(())
+}
+
+
+
+// Assumes the same imports/helpers as `xbrl_get_frame`:
+//   AppState, ToolError, HeaderMap, HeaderValue, USER_AGENT, trim_output,
+//   serde_json::{json, Value}
+
+/// Parse an optional YYYY-MM-DD argument. ISO dates compare correctly as strings.
+fn optional_date_arg(arguments: &Value, key: &str) -> Result<Option<String>, ToolError> {
+    match arguments.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(s)) if s.trim().is_empty() => Ok(None),
+        Some(Value::String(s)) => {
+            let s = s.trim();
+            let b = s.as_bytes();
+            let ok = b.len() == 10
+                && b[4] == b'-'
+                && b[7] == b'-'
+                && b.iter()
+                    .enumerate()
+                    .all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit());
+            if ok {
+                Ok(Some(s.to_string()))
+            } else {
+                Err(ToolError::Http(format!(
+                    "Invalid {key}: expected YYYY-MM-DD, got '{s}'"
+                )))
+            }
+        }
+        _ => Err(ToolError::MissingInput),
+    }
+}
+
+/// `form` may be a string ("10-Q"), a comma-separated string ("10-Q,10-K"),
+/// or an array of strings. Returns upper-cased forms; empty = no filter.
+fn forms_arg(arguments: &Value) -> Vec<String> {
+    match arguments.get("form") {
+        Some(Value::String(s)) => s
+            .split(',')
+            .map(|f| f.trim().to_uppercase())
+            .filter(|f| !f.is_empty())
+            .collect(),
+        Some(Value::Array(a)) => a
+            .iter()
+            .filter_map(|v| v.as_str())
+            .map(|f| f.trim().to_uppercase())
+            .filter(|f| !f.is_empty())
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// Convert a columnar block ({"form": [...], "filingDate": [...], ...})
+/// into row objects, applying the filters. Rows keep the source order
+/// (SEC returns newest first).
+fn collect_filings(
+    block: &Value,
+    cik: &str,
+    forms: &[String],
+    from: Option<&str>,
+    to: Option<&str>,
+    out: &mut Vec<Value>,
+) {
+    let col = |name: &str| block.get(name).and_then(|v| v.as_array());
+
+    let (Some(dates), Some(form_col), Some(accs)) =
+        (col("filingDate"), col("form"), col("accessionNumber"))
+    else {
+        return;
+    };
+
+    let report_dates = col("reportDate");
+    let prim_docs = col("primaryDocument");
+    let prim_desc = col("primaryDocDescription");
+    let items = col("items");
+    let sizes = col("size");
+    let acc_times = col("acceptanceDateTime");
+    let is_xbrl = col("isXBRL");
+
+    let str_at = |c: Option<&Vec<Value>>, i: usize| -> String {
+        c.and_then(|a| a.get(i))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string()
+    };
+
+    let cik_trimmed = cik.trim_start_matches('0');
+
+    for i in 0..dates.len() {
+        let date = dates[i].as_str().unwrap_or("");
+        let form = form_col.get(i).and_then(|v| v.as_str()).unwrap_or("");
+
+        if let Some(f) = from {
+            if date < f {
+                continue;
+            }
+        }
+        if let Some(t) = to {
+            if date > t {
+                continue;
+            }
+        }
+        if !forms.is_empty() && !forms.iter().any(|f| f.eq_ignore_ascii_case(form)) {
+            continue;
+        }
+
+        let acc = accs.get(i).and_then(|v| v.as_str()).unwrap_or("");
+        let acc_nodash = acc.replace('-', "");
+        let doc = str_at(prim_docs, i);
+
+        let url = if doc.is_empty() {
+            format!("{SEC_BASE_ARCHIVES}/{cik_trimmed}/{acc_nodash}/")
+        } else {
+            format!("{SEC_BASE_ARCHIVES}/{cik_trimmed}/{acc_nodash}/{doc}")
+        };
+
+        out.push(json!({
+            "form": form,
+            "filing_date": date,
+            "report_date": str_at(report_dates, i),
+            "accession_number": acc,
+            "acceptance_datetime": str_at(acc_times, i),
+            "primary_document": doc,
+            "primary_doc_description": str_at(prim_desc, i),
+            "items": str_at(items, i),
+            "size": sizes.and_then(|a| a.get(i)).cloned().unwrap_or(Value::Null),
+            "is_xbrl": is_xbrl.and_then(|a| a.get(i)).cloned().unwrap_or(Value::Null),
+            "url": url,
+        }));
+    }
+}
+
+pub async fn get_submissions(
+    state: &AppState,
+    arguments: &Value,
+) -> Result<String, ToolError> {
+    // --- required input -----------------------------------------------
+
+    let cik_raw = match arguments.get("cik") {
+        Some(Value::String(s)) if !s.trim().is_empty() => s.trim().to_string(),
+        Some(Value::Number(n)) => n.to_string(),
+        _ => return Err(ToolError::MissingInput),
+    };
+
+    // Accept "1045810", "0001045810", "CIK0001045810".
+    let digits: String = cik_raw
+        .trim_start_matches(|c: char| !c.is_ascii_digit())
+        .to_string();
+    if digits.is_empty() || !digits.chars().all(|c| c.is_ascii_digit()) || digits.len() > 10 {
+        return Err(ToolError::Http(format!("Invalid CIK: '{cik_raw}'")));
+    }
+    let cik = format!("{:0>10}", digits);
+
+    // --- optional filters ---------------------------------------------
+
+    let forms = forms_arg(arguments);
+    let from = optional_date_arg(arguments, "filing_date_from")?;
+    let to = optional_date_arg(arguments, "filing_date_to")?;
+
+    if let (Some(f), Some(t)) = (&from, &to) {
+        if f > t {
+            return Err(ToolError::Http(
+                "filing_date_from must not be after filing_date_to".to_string(),
+            ));
+        }
+    }
+
+    let limit = arguments
+        .get("limit")
+        .and_then(|v| v.as_u64())
+        .map(|n| n as usize)
+        .unwrap_or(100)
+        .clamp(1, 1000);
+
+    // --- headers -------------------------------------------------------
+
+    let make_headers = || -> Result<HeaderMap, ToolError> {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            USER_AGENT,
+            HeaderValue::from_str(&state.config.email)
+                .map_err(|e| ToolError::Http(e.to_string()))?,
+        );
+        Ok(headers)
+    };
+
+    // --- fetch main submissions file -----------------------------------
+
+    let url = format!("{SEC_BASE_SUBMISSIONS}/CIK{cik}.json");
+
+    let bytes = state
+        .client
+        .get_bytes(&url, make_headers()?)
+        .await
+        .map_err(|e| ToolError::Http(e.to_string()))?;
+
+    let data: Value = serde_json::from_slice(&bytes)
+        .map_err(|e| ToolError::Http(format!("Failed to parse submissions: {e}")))?;
+
+    // --- collect filings from "recent" ---------------------------------
+
+    let mut filings: Vec<Value> = Vec::new();
+
+    if let Some(recent) = data.get("filings").and_then(|f| f.get("recent")) {
+        collect_filings(recent, &cik, &forms, from.as_deref(), to.as_deref(), &mut filings);
+    }
+
+    // --- older filings live in additional files ------------------------
+    // Each entry: {"name": "...", "filingFrom": "YYYY-MM-DD", "filingTo": "YYYY-MM-DD"}.
+    // Only fetch the ones whose range overlaps the requested date window.
+
+    let mut extra_files_fetched: Vec<String> = Vec::new();
+
+    if let Some(files) = data
+        .get("filings")
+        .and_then(|f| f.get("files"))
+        .and_then(|f| f.as_array())
+    {
+        for f in files {
+            let (Some(name), Some(f_from), Some(f_to)) = (
+                f.get("name").and_then(|v| v.as_str()),
+                f.get("filingFrom").and_then(|v| v.as_str()),
+                f.get("filingTo").and_then(|v| v.as_str()),
+            ) else {
+                continue;
+            };
+
+            // Skip if the file's range lies entirely outside the window.
+            if let Some(from) = &from {
+                if f_to < from.as_str() {
+                    continue;
+                }
+            }
+            if let Some(to) = &to {
+                if f_from > to.as_str() {
+                    continue;
+                }
+            }
+
+            let file_url = format!("{SEC_BASE_SUBMISSIONS}/{name}");
+
+            let bytes = state
+                .client
+                .get_bytes(&file_url, make_headers()?)
+                .await
+                .map_err(|e| ToolError::Http(e.to_string()))?;
+
+            // These files are a bare columnar block (no "filings" wrapper).
+            let block: Value = serde_json::from_slice(&bytes).map_err(|e| {
+                ToolError::Http(format!("Failed to parse submissions file {name}: {e}"))
+            })?;
+
+            collect_filings(&block, &cik, &forms, from.as_deref(), to.as_deref(), &mut filings);
+            extra_files_fetched.push(file_url);
+        }
+    }
+
+    // --- sort newest first, truncate -----------------------------------
+
+    filings.sort_by(|a, b| {
+        let da = a.get("filing_date").and_then(|v| v.as_str()).unwrap_or("");
+        let db = b.get("filing_date").and_then(|v| v.as_str()).unwrap_or("");
+        db.cmp(da).then_with(|| {
+            let aa = a.get("accession_number").and_then(|v| v.as_str()).unwrap_or("");
+            let ab = b.get("accession_number").and_then(|v| v.as_str()).unwrap_or("");
+            ab.cmp(aa)
+        })
+    });
+
+    let total_matches = filings.len();
+    filings.truncate(limit);
+
+    // --- output --------------------------------------------------------
+
+    let mut result = json!({
+        "cik": cik,
+        "name": data.get("name"),
+        "tickers": data.get("tickers"),
+        "sic": data.get("sic"),
+        "sic_description": data.get("sicDescription"),
+        "fiscal_year_end": data.get("fiscalYearEnd"),
+        "filters": {
+            "form": forms,
+            "filing_date_from": from,
+            "filing_date_to": to,
+            "limit": limit,
+        },
+        "total_matches": total_matches,
+        "returned": filings.len(),
+        "filings": filings,
+        "source_url": url,
+        "additional_files_fetched": extra_files_fetched,
+    });
+
+    // --- trim large result ---------------------------------------------
+
+    const MAX_OUTPUT_CHARS: usize = 40_000;
+
+    if let Some(f) = result.get_mut("filings") {
+        trim_output(f, MAX_OUTPUT_CHARS);
+    }
+
+    // --- serialize -----------------------------------------------------
+
+    serde_json::to_string(&result).map_err(|e| ToolError::Http(e.to_string()))
 }

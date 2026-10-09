@@ -279,5 +279,39 @@ pub fn tools_list() -> Vec<ToolDefinition> {
                 "required": ["taxonomy", "tag", "unit", "frame"]
             }),
         },
+        ToolDefinition {
+            name: "edgar.get_submissions".into(),
+            description: "Fetch the SEC EDGAR filing history (submissions) for a company identified by its CIK, with optional filters on form type and filing date range. Returns the company's name, tickers, SIC code and fiscal year end, plus a list of matching filings (newest first), each with form type, filing date, report date, accession number, acceptance timestamp, primary document, items (for 8-Ks), and a direct URL to the filing document on sec.gov. Older filings are fetched automatically when the requested date range reaches back beyond the recent-filings window. Use this to find specific filings such as 10-Ks, 10-Qs, 8-Ks, proxy statements or insider forms (3/4/5/144) for a company, e.g. 'the last four 10-Qs' or 'all 8-Ks filed in 2025'.".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "cik": {
+                        "type": ["string", "number"],
+                        "description": "The company's SEC Central Index Key (CIK). Accepts a numeric CIK or a string, optionally prefixed with 'CIK'. The CIK must contain up to 10 digits; it is automatically zero-padded to 10 digits (e.g. '1045810', '0001045810', or 'CIK0001045810' for NVIDIA Corp)."
+                    },
+                    "form": {
+                        "type": ["string", "array"],
+                        "items": { "type": "string" },
+                        "description": "Optional form type filter, such as '10-Q', '10-K', '8-K', 'DEF 14A', '4' or '144'. Accepts a single form, a comma-separated string (e.g. '10-Q,10-K'), or an array of forms. Matching is case-insensitive and exact, so amendments such as '10-Q/A' must be requested explicitly. If omitted, all form types are returned."
+                    },
+                    "filing_date_from": {
+                        "type": "string",
+                        "description": "Optional inclusive start of the filing date range, in YYYY-MM-DD format (e.g. '2025-01-01'). Only filings filed on or after this date are returned."
+                    },
+                    "filing_date_to": {
+                        "type": "string",
+                        "description": "Optional inclusive end of the filing date range, in YYYY-MM-DD format (e.g. '2025-12-31'). Only filings filed on or before this date are returned. Must not be earlier than filing_date_from."
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000,
+                        "default": 100,
+                        "description": "Optional maximum number of filings to return, newest first. Defaults to 100. The response includes total_matches so truncation can be detected."
+                    }
+                },
+                "required": ["cik"]
+            }),
+        },
     ]
 }
